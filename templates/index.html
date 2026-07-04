@@ -62,6 +62,14 @@
     <span class="brand-txt"><b>BUUB</b><span>ADMIN</span></span>
   </div>
 
+  {% if sub %}
+  <a class="sub-chip s-{{ sub.state }}" href="{% url 'abonnement' %}" title="Voir l'abonnement"
+     data-sub-state="{{ sub.state }}"{% if sub.current_period_end %} data-sub-end="{{ sub.current_period_end|date:'Y-m-d' }}"{% endif %}>
+    <span class="sub-chip-top">Abonnement <b>{{ sub.state_label }}</b></span>
+    <span class="sub-chip-days" id="subDays">{% if sub.is_active %}{{ sub.days_left }} jour{{ sub.days_left|pluralize }} restant{{ sub.days_left|pluralize }}{% elif sub.state == 'suspended' %}Compte suspendu{% else %}Abonnement expiré{% endif %}</span>
+  </a>
+  {% endif %}
+
   <nav class="sidebar-nav">
     <div class="nav-label">Navigation</div>
     <button class="nav-tab active" data-page="dashboard">
@@ -115,6 +123,7 @@
         <span class="acct-bar" title="Votre établissement"><img class="acct-logo-img" src="{% static 'icons/buub.jpeg' %}" alt="BUUB"> {{ bar.name }}</span>
         <button type="button" class="acct-link" data-modal="team" title="Gérer l'équipe"><svg class="ico"><use href="#i-clipboard"></use></svg><span>Équipe</span></button>
         <button type="button" class="acct-link" data-modal="settings" title="Réglages de l'établissement"><svg class="ico"><use href="#i-settings"></use></svg><span>Réglages</span></button>
+        {% if user.is_superuser %}<a class="acct-link" href="{% url 'platform_admin' %}" title="Console plateforme (super-admin)"><svg class="ico"><use href="#i-grid"></use></svg><span>Console</span></a>{% endif %}
         <form method="post" action="{% url 'logout' %}" class="acct-logout">{% csrf_token %}<button type="submit" title="Se déconnecter"><svg class="ico"><use href="#i-x"></use></svg><span>Déconnexion</span></button></form>
       </div>
     </div>
@@ -394,8 +403,30 @@
               </div>
             </div>
             <div class="price-group">
-              <span class="field-cap"><svg class="ico"><use href="#i-coins"></use></svg> Prix XAF</span>
-              <input type="number" id="newPrice" placeholder="Prix" min="0" step="any" inputmode="decimal">
+              <span class="field-cap"><svg class="ico"><use href="#i-coins"></use></svg> Prix de vente</span>
+              <input type="number" id="newPrice" placeholder="Vente" min="0" step="any" inputmode="decimal">
+            </div>
+            <div class="price-group">
+              <span class="field-cap"><svg class="ico"><use href="#i-coins"></use></svg> Prix d'achat</span>
+              <input type="number" id="newCost" placeholder="Achat" min="0" step="any" inputmode="decimal">
+            </div>
+            <div class="input-group">
+              <span class="field-cap"><svg class="ico"><use href="#i-tag"></use></svg> Description (menu client)</span>
+              <input type="text" id="newDesc" placeholder="Ex : bien fraîche, fait maison, épicé…" maxlength="200" autocomplete="off">
+            </div>
+            <div class="case-group">
+              <span class="field-cap"><svg class="ico"><use href="#i-alert"></use></svg> Seuil d'alerte</span>
+              <input type="number" id="newThreshold" placeholder="5" min="0" value="5">
+            </div>
+            <div class="input-group">
+              <span class="field-cap"><svg class="ico"><use href="#i-grid"></use></svg> Badge (menu client)</span>
+              <select id="newBadge">
+                <option value="">Aucun</option>
+                <option value="new">Nouveau</option>
+                <option value="popular">Populaire</option>
+                <option value="spicy">Épicé</option>
+                <option value="veggie">Végé</option>
+              </select>
             </div>
             <div class="photo-group">
               <span class="field-cap"><svg class="ico"><use href="#i-image"></use></svg> Photo</span>
@@ -944,6 +975,66 @@
   </div>
 </div>
 
+<!-- ===== MODALE MODIFIER L'ARTICLE ===== -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="ttl"><svg class="ico"><use href="#i-edit"></use></svg> Modifier — <span id="editItemName"></span></span>
+      <button class="x-btn" id="editClose" aria-label="Fermer"><svg class="ico"><use href="#i-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Nom</label>
+        <input type="text" id="editName" class="field-input" maxlength="120">
+      </div>
+      <div class="field">
+        <label>Catégorie</label>
+        <input type="text" id="editCategory" class="field-input" list="catList">
+      </div>
+      <div class="field">
+        <label>Description (menu client)</label>
+        <input type="text" id="editDesc" class="field-input" maxlength="200" placeholder="Ex : bien fraîche, fait maison…">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Prix de vente (XAF)</label>
+          <input type="number" id="editPrice" class="field-input" min="0" step="any" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>Prix d'achat (XAF)</label>
+          <input type="number" id="editCost" class="field-input" min="0" step="any" inputmode="decimal">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Prix promo (0 = aucune)</label>
+          <input type="number" id="editPromo" class="field-input" min="0" step="any" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>Seuil d'alerte stock</label>
+          <input type="number" id="editThreshold" class="field-input" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>Badge (menu client)</label>
+        <select id="editBadge" class="field-input">
+          <option value="">Aucun</option>
+          <option value="new">Nouveau</option>
+          <option value="popular">Populaire</option>
+          <option value="promo">Promo</option>
+          <option value="spicy">Épicé</option>
+          <option value="veggie">Végé</option>
+        </select>
+      </div>
+      <div class="edit-margin-hint" id="editMarginHint"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="editCancel">Annuler</button>
+      <button class="btn btn-primary" id="editConfirm"><svg class="ico"><use href="#i-check"></use></svg> Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODALE RÉGLAGES ===== -->
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal">
@@ -1018,5 +1109,36 @@
 </script>
 <script src="{% static 'offline.js' %}"></script>
 <script src="{% static 'app.js' %}"></script>
+<script>
+/* Compteur d'abonnement : recalcule les jours restants depuis la date de fin. */
+(function () {
+  var el = document.getElementById('subDays');
+  if (!el) return;
+  var chip = el.closest('.sub-chip');
+  var end = chip && chip.getAttribute('data-sub-end');
+  var state = chip && chip.getAttribute('data-sub-state');
+  if (!end || state === 'suspended') return;
+  function upd() {
+    var d = new Date(end + 'T23:59:59');
+    var diff = d - new Date();
+    var days = Math.ceil(diff / 86400000);
+    chip.classList.remove('s-warn');
+    if (diff <= 0) {
+      el.textContent = 'Abonnement expiré';
+      chip.classList.remove('s-active', 's-trial'); chip.classList.add('s-expired');
+      return;
+    }
+    if (days <= 1) {
+      var h = Math.floor(diff / 3600000);
+      el.textContent = h >= 1 ? ('Expire dans ' + h + ' h') : 'Expire aujourd’hui';
+    } else {
+      el.textContent = days + ' jours restants';
+    }
+    if (days <= 3) chip.classList.add('s-warn');
+  }
+  upd();
+  setInterval(upd, 60000);  // rafraîchit chaque minute
+})();
+</script>
 </body>
 </html>

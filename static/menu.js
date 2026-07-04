@@ -198,17 +198,30 @@
     }).map(function (c) { return { cat: c, items: groups[c] }; });
   }
 
+  var BADGE_LABELS = { new: 'Nouveau', popular: 'Populaire', promo: 'Promo', spicy: 'Épicé', veggie: 'Végé' };
+  function isPromo(it) { return it.promo_price != null && it.promo_price > 0 && it.promo_price < it.price; }
+  function unitPrice(it) { return isPromo(it) ? it.promo_price : it.price; }
+
   function cardHtml(it) {
     var inCart = cart[it.id] || 0;
     var img = it.image
       ? '<span class="m-card-img" style="background-image:url(\'' + encodeURI(it.image) + '\')"></span>'
       : '<span class="m-card-img m-card-img-ph">' + esc((it.name || '?').charAt(0).toUpperCase()) + '</span>';
+    var promo = isPromo(it);
+    var priceHtml = promo
+      ? '<span class="m-card-price promo"><s>' + fmt(it.price) + '</s> ' + fmt(it.promo_price) + '</span>'
+      : '<span class="m-card-price">' + fmt(it.price) + '</span>';
+    var badge = (it.badge && BADGE_LABELS[it.badge])
+      ? '<span class="m-ribbon r-' + esc(it.badge) + '">' + esc(BADGE_LABELS[it.badge]) + '</span>' : '';
+    var desc = it.description ? '<span class="m-card-desc">' + esc(it.description) + '</span>' : '';
     return '<button class="m-card' + (inCart ? ' active' : '') + '" data-id="' + esc(it.id) + '">'
       + (inCart ? '<span class="m-badge">' + inCart + '</span>' : '')
+      + badge
       + img
       + '<span class="m-card-body">'
       + '<span class="m-card-name">' + esc(it.name) + '</span>'
-      + '<span class="m-card-price">' + fmt(it.price) + '</span>'
+      + desc
+      + priceHtml
       + '<span class="m-card-stock">' + (it.quantity > 0 ? 'disponible' : 'rupture') + '</span>'
       + '</span></button>';
   }
@@ -241,7 +254,7 @@
   function totalQty() { var n = 0; for (var k in cart) n += cart[k]; return n; }
   function totalPrice() {
     var t = 0;
-    for (var id in cart) { var it = itemById(id); if (it) t += cart[id] * it.price; }
+    for (var id in cart) { var it = itemById(id); if (it) t += cart[id] * unitPrice(it); }
     return t;
   }
 
@@ -309,7 +322,7 @@
       var qn = cart[id];
       html += '<div class="m-line">'
         + '<div class="m-line-info"><span class="m-line-name">' + esc(it.name) + '</span>'
-        + '<span class="m-line-sub">' + fmt(it.price) + ' · ' + fmt(qn * it.price) + '</span></div>'
+        + '<span class="m-line-sub">' + fmt(unitPrice(it)) + ' · ' + fmt(qn * unitPrice(it)) + '</span></div>'
         + '<div class="m-step">'
         + '<button data-act="minus" data-id="' + esc(id) + '">' + ico('minus') + '</button>'
         + '<span class="qn">' + qn + '</span>'
@@ -375,6 +388,8 @@
   $('sheetBackdrop').addEventListener('click', closeSheet);
   sendBtn.addEventListener('click', send);
   $('againBtn').addEventListener('click', function () { doneScreen.hidden = true; loadMenu(); });
+  var playBtn = $('playBtn');
+  if (playBtn) playBtn.addEventListener('click', function () { if (window.BuubGames) window.BuubGames.open(); });
 
   loadMenu();
 })();

@@ -112,6 +112,34 @@
       letter-spacing: 1.5px;
     }
 
+    /* Compteur d'abonnement (sous le logo) */
+    .sub-chip {
+      display: flex; flex-direction: column; gap: 3px;
+      margin: 14px 16px 0; padding: 11px 13px;
+      border-radius: 12px; text-decoration: none;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      transition: border-color .15s, background .15s;
+    }
+    .sub-chip:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,215,0,0.4); }
+    .sub-chip-top {
+      font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.7px;
+      color: #9fb0c4; font-weight: 700; display: flex; align-items: center; gap: 7px;
+    }
+    .sub-chip-top::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #9fb0c4; flex: 0 0 auto; }
+    .sub-chip-top b { color: #fff; font-weight: 800; letter-spacing: 0.3px; }
+    .sub-chip-days { font-size: 1.05rem; font-weight: 800; color: #fff; letter-spacing: -0.2px; }
+    .sub-chip.s-active .sub-chip-top::before { background: var(--green); box-shadow: 0 0 0 3px rgba(56,161,105,0.2); }
+    .sub-chip.s-active .sub-chip-days { color: #7ee2a8; }
+    .sub-chip.s-trial .sub-chip-top::before { background: #4aa3ff; box-shadow: 0 0 0 3px rgba(74,163,255,0.2); }
+    .sub-chip.s-trial .sub-chip-days { color: #7ec6ff; }
+    .sub-chip.s-expired .sub-chip-top::before,
+    .sub-chip.s-suspended .sub-chip-top::before { background: var(--red); box-shadow: 0 0 0 3px rgba(197,48,48,0.2); }
+    .sub-chip.s-expired .sub-chip-days,
+    .sub-chip.s-suspended .sub-chip-days { color: #ff9a9a; font-size: 0.92rem; }
+    .sub-chip.s-warn .sub-chip-top::before { background: var(--gold); box-shadow: 0 0 0 3px rgba(255,212,0,0.22); }
+    .sub-chip.s-warn .sub-chip-days { color: var(--gold-soft); }
+
     .sidebar-nav {
       padding: 16px 12px;
       display: flex;
@@ -406,6 +434,38 @@
     .kind-seg { width: 100%; }
     .kind-seg .seg-tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
     .kind-seg .seg-tab .ico { width: 15px; height: 15px; }
+
+    /* Marge unitaire sur la carte article */
+    .item-margin {
+      display: inline-flex; align-items: center; gap: 5px; margin-top: 3px;
+      padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 700;
+      color: #2f855a; background: rgba(47, 133, 90, 0.12); border: 1px solid rgba(47, 133, 90, 0.3);
+    }
+    .item-margin .ico { width: 12px; height: 12px; }
+    .item-margin.neg { color: #c53030; background: rgba(197, 48, 48, 0.1); border-color: rgba(197, 48, 48, 0.3); }
+
+    /* Badge menu (nouveau / populaire / promo / épicé / végé) */
+    .item-badge {
+      display: inline-block; margin-left: 7px; padding: 1px 8px; border-radius: 999px;
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+      vertical-align: middle; color: #fff; background: #718096;
+    }
+    .item-badge.b-new { background: #3182ce; }
+    .item-badge.b-popular { background: #dd6b20; }
+    .item-badge.b-promo { background: #c53030; }
+    .item-badge.b-spicy { background: #e53e3e; }
+    .item-badge.b-veggie { background: #2f855a; }
+
+    /* Prix en promo sur le bouton prix */
+    .item-price.promo { color: #c53030; }
+    .item-price.promo s { opacity: .55; font-weight: 600; margin-right: 4px; color: var(--muted); }
+
+    /* Indice de marge dans la modale d'édition */
+    .edit-margin-hint {
+      margin-top: 10px; padding: 9px 12px; border-radius: 10px;
+      background: rgba(47, 133, 90, 0.1); color: #2f855a; font-weight: 800; font-size: 0.85rem; text-align: center;
+    }
+    .edit-margin-hint.neg { background: rgba(197, 48, 48, 0.1); color: #c53030; }
 
     /* ===== MODALES D'ADMINISTRATION (Réglages / Équipe / QR) ===== */
     .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

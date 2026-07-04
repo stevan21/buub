@@ -1,7 +1,14 @@
 import secrets
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
+
+# Abonnement SaaS : 10 000 XAF / mois par établissement.
+SUBSCRIPTION_PRICE = 10000
+TRIAL_DAYS = 14        # essai gratuit à l'inscription
+PERIOD_DAYS = 30       # durée d'un mois d'abonnement
 
 
 def generate_token():
@@ -73,6 +80,12 @@ class Bar(models.Model):
                 seen.add(cat.lower())
         return ordered
 
+    @property
+    def subscription_active(self):
+        """True si l'établissement a un abonnement en cours (ou essai valide)."""
+        sub = getattr(self, "subscription", None)
+        return bool(sub and sub.is_active)
+
 
 class Profile(models.Model):
     """Lie un utilisateur Django à un bar avec un rôle."""
@@ -92,13 +105,26 @@ class Profile(models.Model):
 class Item(models.Model):
     """Un article du stock (boisson, plat, etc.)."""
     KIND_CHOICES = [("drink", "Boisson"), ("food", "Nourriture")]
+    BADGE_CHOICES = [
+        ("", "Aucun"),
+        ("new", "Nouveau"),
+        ("popular", "Populaire"),
+        ("promo", "Promo"),
+        ("spicy", "Épicé"),
+        ("veggie", "Végé"),
+    ]
 
     bar = models.ForeignKey(Bar, on_delete=models.CASCADE, related_name="items")
     name = models.CharField("Nom", max_length=120)
     category = models.CharField("Catégorie", max_length=60, blank=True, default="")
     kind = models.CharField("Type", max_length=8, choices=KIND_CHOICES, default="drink")
+    description = models.CharField("Description", max_length=200, blank=True, default="")
+    badge = models.CharField("Badge", max_length=10, choices=BADGE_CHOICES, blank=True, default="")
     quantity = models.IntegerField("Quantité", default=0)
-    price = models.DecimalField("Prix unitaire (XAF)", max_digits=12, decimal_places=2, default=0)
+    low_stock_threshold = models.IntegerField("Seuil d'alerte stock", default=5)
+    price = models.DecimalField("Prix de vente (XAF)", max_digits=12, decimal_places=2, default=0)
+    cost_price = models.DecimalField("Prix d'achat (XAF)", max_digits=12, decimal_places=2, default=0)
+    promo_price = models.DecimalField("Prix promo (XAF)", max_digits=12, decimal_places=2, null=True, blank=True)
     image = models.ImageField("Photo", upload_to="items/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -110,6 +136,25 @@ class Item(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.quantity})"
+
+    @property
+    def on_promo(self):
+        """True si un prix promo valide (>0 et < prix de vente) est défini."""
+        return self.promo_price is not None and 0 < self.promo_price < self.price
+
+    @property
+    def effective_price(self):
+        """Prix réellement facturé (promo si active, sinon prix de vente)."""
+        return self.promo_price if self.on_promo else self.price
+
+    @property
+    def margin(self):
+        """Marge unitaire = prix facturé − prix d'achat."""
+        return self.effective_price - (self.cost_price or 0)
+
+    @property
+    def is_low_stock(self):
+        return self.quantity <= (self.low_stock_threshold or 0)
 
 
 class Movement(models.Model):
@@ -228,3 +273,93 @@ class PendingOrderLine(models.Model):
 
     def __str__(self):
         return f"{self.qty} x {self.item_name}"
+
+
+class MenuScan(models.Model):
+    """Une consultation du menu public (scan du QR code d'une table).
+    Chaque ouverture de la page menu crée un enregistrement -> statistiques d'affluence."""
+    bar = models.ForeignKey(Bar, on_delete=models.CASCADE, related_name="scans")
+    table = models.CharField(max_length=40, blank=True, default="")
+    ts = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-ts"]  # plus récent en premier
+        indexes = [models.Index(fields=["bar", "ts"])]
+
+    def __str__(self):
+        return f"Scan {self.bar.name} {self.ts:%Y-%m-%d %H:%M}"
+
+
+class Subscription(models.Model):
+    """Abonnement d'un établissement au service BUUB (10 000 XAF / mois)."""
+    bar = models.OneToOneField(Bar, on_delete=models.CASCADE, related_name="subscription")
+    is_trial = models.BooleanField("Essai gratuit", default=True)
+    suspended = models.BooleanField("Suspendu", default=False)
+    current_period_end = models.DateField("Payé jusqu'au", null=True, blank=True)
+    price = models.DecimalField("Prix mensuel (XAF)", max_digits=10, decimal_places=2, default=SUBSCRIPTION_PRICE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Abonnement {self.bar.name} ({self.state_label})"
+
+    @property
+    def is_active(self):
+        if self.suspended:
+            return False
+        return self.current_period_end is not None and self.current_period_end >= timezone.localdate()
+
+    @property
+    def days_left(self):
+        if not self.current_period_end:
+            return 0
+        return (self.current_period_end - timezone.localdate()).days
+
+    @property
+    def state(self):
+        if self.suspended:
+            return "suspended"
+        if self.is_active:
+            return "trial" if self.is_trial else "active"
+        return "expired"
+
+    @property
+    def state_label(self):
+        return {"suspended": "Suspendu", "trial": "Essai gratuit",
+                "active": "Actif", "expired": "Expiré"}[self.state]
+
+    def extend(self, months=1, payment=True, method="manuel", note="", by=None):
+        """Prolonge l'abonnement de `months` mois (30 j) à partir de la fin en cours
+        ou d'aujourd'hui, réactive le compte, et enregistre le paiement."""
+        today = timezone.localdate()
+        base = self.current_period_end if (self.current_period_end and self.current_period_end > today) else today
+        start = base
+        self.current_period_end = base + timedelta(days=PERIOD_DAYS * months)
+        self.is_trial = False
+        self.suspended = False
+        self.save()
+        if payment:
+            SubscriptionPayment.objects.create(
+                bar=self.bar, amount=self.price * months, period_start=start,
+                period_end=self.current_period_end, method=method, note=note,
+                created_by=(by.username if by else ""),
+            )
+        return self
+
+
+class SubscriptionPayment(models.Model):
+    """Historique des paiements d'abonnement (confirmés manuellement pour l'instant)."""
+    bar = models.ForeignKey(Bar, on_delete=models.CASCADE, related_name="subscription_payments")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    method = models.CharField(max_length=30, default="manuel")  # manuel, momo, orange…
+    note = models.CharField(max_length=160, blank=True, default="")
+    created_by = models.CharField(max_length=120, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.bar.name} · {self.amount} XAF ({self.period_end})"

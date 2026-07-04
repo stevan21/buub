@@ -1,0 +1,154 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BUUB — Console plateforme</title>
+  <link rel="stylesheet" href="{% static 'superadmin.css' %}?v={{ asset_v }}">
+  <meta name="theme-color" content="#0e1116">
+  <link rel="apple-touch-icon" href="{% static 'icons/buub.jpeg' %}">
+  <link rel="icon" href="{% static 'icons/buub.jpeg' %}">
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <script src="{% static 'pwa.js' %}" defer></script>
+</head>
+<body class="sa-body">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M18.5 20a5.5 5.5 0 0 0-3.4-5.1"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
+</defs></svg>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sa-side" id="saSide">
+  <div class="sa-side-brand">
+    <span class="sa-logo">BUUB</span>
+    <span class="sa-brand-txt"><b>Console</b><span>Plateforme</span></span>
+  </div>
+  <nav class="sa-nav">
+    <div class="sa-nav-label">Navigation</div>
+    <button class="sa-tab active" data-page="overview"><svg class="ico"><use href="#i-grid"/></svg> Vue d'ensemble</button>
+    <button class="sa-tab" data-page="bars"><svg class="ico"><use href="#i-store"/></svg> Établissements <span class="sa-tabnum" id="tabBars">0</span></button>
+    <button class="sa-tab" data-page="members"><svg class="ico"><use href="#i-users"/></svg> Membres <span class="sa-tabnum" id="tabMembers">0</span></button>
+    <button class="sa-tab" data-page="subs"><svg class="ico"><use href="#i-card"/></svg> Abonnements <span class="sa-tabnum" id="tabSubs">0</span></button>
+    <button class="sa-tab" data-page="stats"><svg class="ico"><use href="#i-chart"/></svg> Statistiques</button>
+  </nav>
+  <div class="sa-side-foot">
+    <div class="sa-side-meta" id="saGenerated">Chargement…</div>
+  </div>
+</aside>
+<div class="sa-overlay" id="saOverlay"></div>
+
+<!-- ===== MAIN ===== -->
+<div class="sa-shell">
+  <header class="sa-topbar">
+    <button class="sa-menu-btn" id="saMenuBtn" aria-label="Menu"><svg class="ico"><use href="#i-menu"/></svg></button>
+    <h2 id="saPageTitle"><svg class="ico"><use href="#i-grid"/></svg> Vue d'ensemble</h2>
+    <div class="sa-topbar-actions">
+      <button class="sa-btn" id="saRefresh" type="button"><svg class="ico"><use href="#i-refresh"/></svg> Actualiser</button>
+      <form method="post" action="{% url 'logout' %}" class="sa-logout">{% csrf_token %}<button type="submit"><svg class="ico"><use href="#i-logout"/></svg> <span>Déconnexion</span></button></form>
+    </div>
+  </header>
+
+  <div class="sa-content">
+
+    <!-- VUE D'ENSEMBLE -->
+    <div class="sa-page active" id="page-overview">
+      <section class="sa-kpis">
+        <div class="sa-kpi sa-kpi-accent"><div class="sa-kpi-val" id="kScans">—</div><div class="sa-kpi-lbl">Scans du menu (total)</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="kScansToday">—</div><div class="sa-kpi-lbl">Scans aujourd'hui</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="kScans7">—</div><div class="sa-kpi-lbl">Scans (7 jours)</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="kBars">—</div><div class="sa-kpi-lbl">Établissements</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="kMembers">—</div><div class="sa-kpi-lbl">Membres</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="kSubsActive">—</div><div class="sa-kpi-lbl">Abonnements actifs</div></div>
+      </section>
+      <div class="sa-bytype" id="saByType"></div>
+      <div class="sa-panel">
+        <div class="sa-panel-h"><svg class="ico"><use href="#i-chart"/></svg> Top établissements (par scans)</div>
+        <div class="sa-panel-b" id="saTop"></div>
+      </div>
+    </div>
+
+    <!-- ÉTABLISSEMENTS -->
+    <div class="sa-page" id="page-bars">
+      <section class="sa-controls">
+        <div class="sa-search"><input type="text" id="saSearch" placeholder="Rechercher un établissement…" autocomplete="off"></div>
+        <select id="saType" class="sa-select">
+          <option value="">Tous les types</option>
+          <option value="bar">Bar</option>
+          <option value="cave">Cave</option>
+          <option value="restaurant">Restaurant</option>
+          <option value="bar_resto">Bar-Restaurant</option>
+        </select>
+        <select id="saSort" class="sa-select">
+          <option value="scans">Scans (total)</option>
+          <option value="today">Scans aujourd'hui</option>
+          <option value="recent">Plus récents</option>
+          <option value="name">Nom (A→Z)</option>
+          <option value="members">Nb de membres</option>
+        </select>
+      </section>
+      <section class="sa-grid" id="saGrid"><div class="sa-empty">Chargement…</div></section>
+    </div>
+
+    <!-- MEMBRES -->
+    <div class="sa-page" id="page-members">
+      <section class="sa-controls">
+        <div class="sa-search"><input type="text" id="saMemberSearch" placeholder="Rechercher un membre ou un établissement…" autocomplete="off"></div>
+      </section>
+      <div class="sa-panel"><div class="sa-panel-b" id="saMembers"></div></div>
+    </div>
+
+    <!-- ABONNEMENTS -->
+    <div class="sa-page" id="page-subs">
+      <section class="sa-kpis">
+        <div class="sa-kpi"><div class="sa-kpi-val" id="subActive">—</div><div class="sa-kpi-lbl">Abonnements actifs</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="subExpired">—</div><div class="sa-kpi-lbl">Expirés / suspendus</div></div>
+        <div class="sa-kpi sa-kpi-accent"><div class="sa-kpi-val" id="subMrr">—</div><div class="sa-kpi-lbl">Revenu mensuel (MRR)</div></div>
+      </section>
+      <div class="sa-panel">
+        <div class="sa-panel-h"><svg class="ico"><use href="#i-card"/></svg> Abonnements des établissements</div>
+        <div class="sa-panel-b" id="saSubs"></div>
+      </div>
+      <p class="sa-hint-note">Après réception du paiement (Mobile Money), clique <b>+1 mois</b> pour prolonger l'abonnement de l'établissement.</p>
+    </div>
+
+    <!-- STATISTIQUES -->
+    <div class="sa-page" id="page-stats">
+      <section class="sa-kpis">
+        <div class="sa-kpi sa-kpi-accent"><div class="sa-kpi-val" id="sScans">—</div><div class="sa-kpi-lbl">Scans total</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="sScansToday">—</div><div class="sa-kpi-lbl">Scans aujourd'hui</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="sScans7">—</div><div class="sa-kpi-lbl">Scans (7 jours)</div></div>
+        <div class="sa-kpi"><div class="sa-kpi-val" id="sScansAvg">—</div><div class="sa-kpi-lbl">Scans moyen / bar</div></div>
+      </section>
+      <div class="sa-panel">
+        <div class="sa-panel-h"><svg class="ico"><use href="#i-chart"/></svg> Scans par établissement</div>
+        <div class="sa-panel-b"><div class="sa-chart" id="saChartScans"></div></div>
+      </div>
+      <div class="sa-panel">
+        <div class="sa-panel-h"><svg class="ico"><use href="#i-card"/></svg> CA abonnements par établissement</div>
+        <div class="sa-panel-b"><div class="sa-chart" id="saChartCA"></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modale détail établissement -->
+<div class="sa-modal" id="saModal" hidden>
+  <div class="sa-modal-backdrop" id="saModalBackdrop"></div>
+  <div class="sa-modal-card" id="saModalCard"></div>
+</div>
+
+<div id="saToast" class="sa-toast"></div>
+
+<script>window.ADMIN = { barsUrl: "{% url 'admin_bars' %}", subUrlBase: "/api/admin/bars/", memberUrlBase: "/api/admin/members/", price: {{ price|default:10000 }} };</script>
+<script src="{% static 'superadmin.js' %}?v={{ asset_v }}"></script>
+</body>
+</html>

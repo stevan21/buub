@@ -12,9 +12,11 @@ import qrcode
 from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
 from django.db import transaction
-from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse
+from django.db.models import Sum
+from django.http import JsonResponse, HttpResponseNotAllowed, HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -24,7 +26,8 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .forms import GerantSignupForm, ServeurForm, BarSettingsForm
 from .models import (Item, Movement, Todo, Archive, Order, OrderLine, Profile,
-                     Bar, PendingOrder, PendingOrderLine, guess_kind)
+                     Bar, PendingOrder, PendingOrderLine, guess_kind, MenuScan,
+                     Subscription, SubscriptionPayment, SUBSCRIPTION_PRICE, TRIAL_DAYS)
 
 
 # ----------------------------------------------------------------------------
@@ -36,7 +39,7 @@ def current_bar(request):
 
 
 def api_login_required(view):
-    """Vue API : exige une session, et expose `request.bar` (le tenant)."""
+    """Vue API : exige une session, un abonnement actif, et expose `request.bar`."""
     @wraps(view)
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -44,6 +47,8 @@ def api_login_required(view):
         prof = getattr(request.user, "profile", None)
         if prof is None:
             return JsonResponse({"error": "Compte sans bar associé"}, status=403)
+        if not prof.bar.subscription_active:
+            return JsonResponse({"error": "Abonnement expiré", "subscription": False}, status=402)
         request.bar = prof.bar
         return view(request, *args, **kwargs)
     return wrapper
@@ -73,7 +78,20 @@ def api_gerant_required(view):
             return JsonResponse({"error": "Compte sans bar associé"}, status=403)
         if prof.role != "gerant":
             return JsonResponse({"error": "Réservé au gérant"}, status=403)
+        if not prof.bar.subscription_active:
+            return JsonResponse({"error": "Abonnement expiré", "subscription": False}, status=402)
         request.bar = prof.bar
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+def subscription_gate(view):
+    """Page : renvoie vers /abonnement/ si l'établissement n'a pas d'abonnement actif."""
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        prof = getattr(request.user, "profile", None)
+        if prof and not prof.bar.subscription_active:
+            return redirect("abonnement")
         return view(request, *args, **kwargs)
     return wrapper
 
@@ -86,11 +104,34 @@ def ms(dt):
 
 
 def item_dict(it):
+    """Sérialisation complète (espace gérant) — inclut prix d'achat, marge, seuil."""
     return {
         "id": str(it.id), "name": it.name, "quantity": it.quantity,
         "category": it.category,
         "kind": it.kind,
+        "description": it.description,
+        "badge": it.badge,
+        "low_stock_threshold": it.low_stock_threshold,
+        "low_stock": it.is_low_stock,
         "price": float(it.price),
+        "cost_price": float(it.cost_price or 0),
+        "promo_price": float(it.promo_price) if it.promo_price is not None else None,
+        "on_promo": it.on_promo,
+        "margin": float(it.margin),
+        "image": it.image.url if it.image else "",
+    }
+
+
+def public_item_dict(it):
+    """Sérialisation publique (menu client) — SANS prix d'achat ni marge (données sensibles)."""
+    return {
+        "id": str(it.id), "name": it.name, "quantity": it.quantity,
+        "category": it.category,
+        "kind": it.kind,
+        "description": it.description,
+        "badge": it.badge,
+        "price": float(it.price),
+        "promo_price": float(it.promo_price) if it.on_promo else None,
         "image": it.image.url if it.image else "",
     }
 
@@ -299,6 +340,20 @@ def signup(request):
     return render(request, "signup.html", {"form": form})
 
 
+@login_required
+def after_login(request):
+    """Aiguillage après connexion : chaque compte vers son espace.
+    - super-admin plateforme (sans établissement) -> console /superadmin/
+    - gérant -> tableau de bord ; serveur -> caisse
+    - compte sans bar ni droits plateforme -> accueil."""
+    prof = getattr(request.user, "profile", None)
+    if prof is None:
+        return redirect("platform_admin" if request.user.is_superuser else "home")
+    if prof.role == "gerant":
+        return redirect("dashboard")
+    return redirect("caisse")
+
+
 def serveur_login(request):
     """Connexion dédiée aux serveurs : ouvre directement la caisse plein écran."""
     if request.user.is_authenticated:
@@ -316,6 +371,7 @@ def serveur_login(request):
 
 
 @gerant_required
+@subscription_gate
 def team(request):
     """Gestion des comptes serveurs du bar (gérant uniquement)."""
     bar = current_bar(request)
@@ -331,6 +387,7 @@ def team(request):
 
 
 @gerant_required
+@subscription_gate
 def team_delete(request, pk):
     """Supprime un compte serveur du bar (gérant uniquement)."""
     if request.method != "POST":
@@ -345,6 +402,7 @@ def team_delete(request, pk):
 # Pages applicatives
 # ----------------------------------------------------------------------------
 @gerant_required
+@subscription_gate
 def index(request):
     """Panneau d'administration du bar (réservé au gérant)."""
     bar = current_bar(request)
@@ -352,6 +410,7 @@ def index(request):
         "bar": bar, "role": "gerant",
         "noun": bar.noun, "noun_plural": bar.noun_plural,
         "categories": bar.category_suggestions(),
+        "sub": getattr(bar, "subscription", None),
     })
 
 
@@ -362,13 +421,31 @@ def gerant(request):
     prof = getattr(request.user, "profile", None)
     if prof is None:
         return redirect("home")
+    if not prof.bar.subscription_active:
+        return redirect("abonnement")
     return render(request, "gerant.html", {
         "bar": prof.bar, "role": prof.role,
         "categories": prof.bar.category_suggestions(),
     })
 
 
+@login_required
+def abonnement(request):
+    """Page d'abonnement de l'établissement (statut, prix, paiement, historique)."""
+    prof = getattr(request.user, "profile", None)
+    if prof is None:
+        return redirect("home")
+    bar = prof.bar
+    sub = getattr(bar, "subscription", None)
+    payments = SubscriptionPayment.objects.filter(bar=bar)[:12]
+    return render(request, "abonnement.html", {
+        "bar": bar, "role": prof.role, "sub": sub,
+        "price": SUBSCRIPTION_PRICE, "payments": payments,
+    })
+
+
 @gerant_required
+@subscription_gate
 def reglages(request):
     """Réglages de l'établissement : nom + type (gérant uniquement)."""
     bar = current_bar(request)
@@ -386,12 +463,18 @@ def reglages(request):
 def service_worker(request):
     """Service worker servi à la racine pour couvrir toute l'app (PWA)."""
     sw = """
-const CACHE = 'buub-v2';
-const SHELL = ['/caisse/', '/dashboard/',
-               '/static/style.css', '/static/app.js',
-               '/static/gerant.css', '/static/gerant.js',
-               '/static/offline.js', '/static/manifest.webmanifest',
-               '/static/icons/icon-192.png', '/static/icons/icon-512.png'];
+const CACHE = 'buub-v5';
+// Coquille pré-mise en cache : pages publiques + tous les assets de la plateforme.
+// Les pages authentifiées (caisse, dashboard, superadmin…) sont mises en cache à la
+// volée lors de la première visite (voir la stratégie navigate ci-dessous).
+const SHELL = ['/', '/login/',
+               '/static/home.css', '/static/style.css', '/static/app.js',
+               '/static/gerant.css', '/static/gerant.js', '/static/offline.js', '/static/pwa.js',
+               '/static/menu.css', '/static/menu.js', '/static/games.css', '/static/games.js',
+               '/static/superadmin.css', '/static/superadmin.js',
+               '/static/manifest.webmanifest',
+               '/static/icons/buub.jpeg', '/static/icons/icon-192.png', '/static/icons/icon-512.png',
+               '/static/icons/icon-maskable-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
     // addAll échoue en bloc si une URL manque -> on met en cache au mieux, une par une.
@@ -409,12 +492,15 @@ self.addEventListener('fetch', function (e) {
   // Données : toujours réseau. La couche hors ligne (offline.js) gère le cache/queue.
   if (u.pathname.indexOf('/api/') === 0 || u.pathname.indexOf('/media/') === 0) return;
 
-  // Navigation (page HTML) : réseau d'abord, repli sur la page mise en cache.
+  // Navigation (page HTML) : réseau d'abord ; on met en cache chaque page visitée,
+  // et hors ligne on sert sa version en cache, sinon la page d'accueil publique.
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request).catch(function () {
-        var page = u.pathname.indexOf('/caisse') === 0 ? '/caisse/' : '/dashboard/';
-        return caches.match(page).then(function (m) { return m || caches.match('/caisse/'); });
+      fetch(e.request).then(function (r) {
+        if (r && r.ok) { var cp = r.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, cp); }); }
+        return r;
+      }).catch(function () {
+        return caches.match(e.request).then(function (m) { return m || caches.match('/'); });
       })
     );
     return;
@@ -462,19 +548,22 @@ def items(request):
     image = None
     ctype = request.content_type or ""
     if ctype.startswith("multipart"):
-        name = (request.POST.get("name") or "").strip()
-        qty = to_int(request.POST.get("quantity"), 1)
-        price = to_price(request.POST.get("price"))
-        category = (request.POST.get("category") or "").strip()[:60]
-        kind = (request.POST.get("kind") or "").strip()
+        src = request.POST
         image = request.FILES.get("image")
     else:
-        data = body(request)
-        name = (data.get("name") or "").strip()
-        qty = to_int(data.get("quantity"), 1)
-        price = to_price(data.get("price"))
-        category = (data.get("category") or "").strip()[:60]
-        kind = (data.get("kind") or "").strip()
+        src = body(request)
+
+    name = (src.get("name") or "").strip()
+    qty = to_int(src.get("quantity"), 1)
+    price = to_price(src.get("price"))
+    category = (src.get("category") or "").strip()[:60]
+    kind = (src.get("kind") or "").strip()
+    description = (src.get("description") or "").strip()[:200]
+    badge = (src.get("badge") or "").strip()
+    cost_price = to_price(src.get("cost_price"))
+    promo = to_price(src.get("promo_price"))
+    promo_price = promo if promo > 0 else None
+    threshold = to_int(src.get("low_stock_threshold"), 5)
 
     if not name:
         return err("Nom requis")
@@ -483,6 +572,8 @@ def items(request):
     # Type explicite si fourni, sinon déduit de la catégorie (boisson par défaut).
     if kind not in ("drink", "food"):
         kind = guess_kind(category)
+    if badge not in dict(Item.BADGE_CHOICES):
+        badge = ""
 
     with transaction.atomic():
         existing = Item.objects.filter(bar=bar, name__iexact=name).first()
@@ -491,6 +582,8 @@ def items(request):
             existing.quantity = before + qty
             if price > 0:
                 existing.price = price
+            if cost_price > 0:
+                existing.cost_price = cost_price
             if category:
                 existing.category = category
             if image:
@@ -502,7 +595,11 @@ def items(request):
                 value=Decimal(qty) * existing.price,
             )
         else:
-            it = Item.objects.create(bar=bar, name=name, category=category, kind=kind, quantity=qty, price=price, image=image)
+            it = Item.objects.create(
+                bar=bar, name=name, category=category, kind=kind, quantity=qty,
+                price=price, cost_price=cost_price, promo_price=promo_price,
+                description=description, badge=badge, low_stock_threshold=threshold, image=image,
+            )
             Movement.objects.create(
                 bar=bar, item=it, item_name=it.name, type="create", qty=qty,
                 before=0, after=qty, note="Création article", value=Decimal(qty) * price,
@@ -603,6 +700,42 @@ def item_kind(request, pk):
         return err("Type invalide")
     it.kind = kind
     it.save(update_fields=["kind"])
+    return state_response(bar)
+
+
+@csrf_exempt
+@api_login_required
+def item_update(request, pk):
+    """POST : éditer les détails d'un article. Champs optionnels (présents = modifiés) :
+    name, description, category, kind, badge, price, cost_price, promo_price, low_stock_threshold."""
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    bar = request.bar
+    it = get_object_or_404(Item, pk=pk, bar=bar)
+    data = body(request)
+    if "name" in data:
+        nm = (data.get("name") or "").strip()[:120]
+        if nm and not Item.objects.filter(bar=bar, name__iexact=nm).exclude(pk=it.pk).exists():
+            it.name = nm
+    if "description" in data:
+        it.description = (data.get("description") or "").strip()[:200]
+    if "category" in data:
+        it.category = (data.get("category") or "").strip()[:60]
+    if "kind" in data and data.get("kind") in ("drink", "food"):
+        it.kind = data.get("kind")
+    if "badge" in data:
+        b = (data.get("badge") or "").strip()
+        it.badge = b if b in dict(Item.BADGE_CHOICES) else ""
+    if "price" in data:
+        it.price = to_price(data.get("price"))
+    if "cost_price" in data:
+        it.cost_price = to_price(data.get("cost_price"))
+    if "promo_price" in data:
+        p = to_price(data.get("promo_price"))
+        it.promo_price = p if p > 0 else None
+    if "low_stock_threshold" in data:
+        it.low_stock_threshold = max(0, to_int(data.get("low_stock_threshold"), it.low_stock_threshold))
+    it.save()
     return state_response(bar)
 
 
@@ -712,10 +845,11 @@ def _place_order(bar, label, req):
             before = it.quantity
             it.quantity = before - q
             it.save()
-            line_total = Decimal(q) * it.price
+            unit = it.effective_price
+            line_total = Decimal(q) * unit
             OrderLine.objects.create(
                 order=order, item=it, item_name=it.name, qty=q,
-                unit_price=it.price, line_total=line_total,
+                unit_price=unit, line_total=line_total,
             )
             note = f"Commande #{order.id}" + (f" — {label}" if label else "")
             Movement.objects.create(
@@ -775,11 +909,20 @@ def asset_version(*names):
 def public_menu(request, token):
     """Page publique : menu d'un bar à scanner (aucune connexion requise)."""
     bar = get_object_or_404(Bar, public_token=token)
-    table = (request.GET.get("t") or "").strip()[:20]
+    table = (request.GET.get("t") or "").strip()[:40]
+    # Comptabilise le scan (consultation du menu), quel que soit l'état de l'abonnement.
+    try:
+        MenuScan.objects.create(bar=bar, table=table)
+    except Exception:
+        pass
+    if not bar.subscription_active:
+        resp = render(request, "menu_off.html", {"bar": bar})
+        resp["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return resp
     resp = render(request, "menu.html", {
         "bar": bar, "token": token, "table": table,
         "categories": bar.category_suggestions(),
-        "asset_v": asset_version("menu.css", "menu.js"),
+        "asset_v": asset_version("menu.css", "menu.js", "games.css", "games.js"),
     })
     # HTML toujours revalidé → le client récupère toujours la dernière version
     # des assets (?v=…), même après un changement de design.
@@ -792,7 +935,9 @@ def public_menu_state(request, token):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
     bar = get_object_or_404(Bar, public_token=token)
-    items = [item_dict(i) for i in Item.objects.filter(bar=bar, quantity__gt=0)]
+    if not bar.subscription_active:
+        return JsonResponse({"error": "indisponible", "items": [], "categories": []}, status=402)
+    items = [public_item_dict(i) for i in Item.objects.filter(bar=bar, quantity__gt=0)]
     return JsonResponse({"bar": bar.name, "items": items, "categories": bar.category_suggestions()})
 
 
@@ -803,6 +948,8 @@ def public_menu_order(request, token):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     bar = get_object_or_404(Bar, public_token=token)
+    if not bar.subscription_active:
+        return err("Service indisponible")
     data = body(request)
     table = (data.get("table") or "").strip()[:40]
     raw_lines = data.get("lines") or []
@@ -829,10 +976,11 @@ def public_menu_order(request, token):
             it = items_map.get(iid)
             if not it:
                 continue  # article retiré entre-temps : on ignore la ligne
-            line_total = Decimal(q) * it.price
+            unit = it.effective_price
+            line_total = Decimal(q) * unit
             PendingOrderLine.objects.create(
                 order=po, item=it, item_name=it.name, qty=q,
-                unit_price=it.price, line_total=line_total,
+                unit_price=unit, line_total=line_total,
             )
             total += line_total
         if not po.lines.exists():
@@ -891,6 +1039,7 @@ def _qr_tables(request, bar, n):
 
 
 @gerant_required
+@subscription_gate
 def qrcodes(request):
     """Page gérant : planche de QR codes (un par table) à imprimer."""
     bar = current_bar(request)
@@ -984,6 +1133,7 @@ def archive_detail(request, pk):
 
 
 @login_required
+@subscription_gate
 def archive_pdf(request, pk):
     """GET : page imprimable de l'archive (historique + inventaire) -> PDF via le navigateur."""
     a = get_object_or_404(Archive, pk=pk, bar=current_bar(request))
@@ -1081,6 +1231,7 @@ def archive_pdf(request, pk):
 
 
 @login_required
+@subscription_gate
 def archive_download(request, pk):
     """GET : télécharge l'archive (CSV : historique du jour + inventaire)."""
     a = get_object_or_404(Archive, pk=pk, bar=current_bar(request))
@@ -1103,3 +1254,250 @@ def archive_download(request, pk):
     for s in a.content.get("stock", []):
         w.writerow([s.get("name"), s.get("quantity"), s.get("price"), s.get("value")])
     return resp
+
+
+# ----------------------------------------------------------------------------
+# Console plateforme (super-admin) — vue de tous les bars inscrits
+# Réservée aux super-utilisateurs Django (is_superuser).
+# ----------------------------------------------------------------------------
+def superuser_required(view):
+    """Page : réservée à l'administrateur de la plateforme (super-utilisateur)."""
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if not request.user.is_superuser:
+            return HttpResponseForbidden(
+                "<h1>403</h1><p>Réservé à l'administrateur de la plateforme.</p>"
+            )
+        return view(request, *args, **kwargs)
+    return wrapper
+
+
+def _bar_admin_dict(bar):
+    """Fiche récap d'un bar pour la console plateforme (centrée scans + abonnement)."""
+    members = list(bar.members.select_related("user").all())
+    # Chiffre d'affaires plateforme pour ce bar : total encaissé via ses abonnements.
+    sub_revenue = float(SubscriptionPayment.objects.filter(bar=bar).aggregate(s=Sum("amount"))["s"] or 0)
+    # Affluence : scans du menu QR (total, aujourd'hui, 7 derniers jours, dernier scan).
+    day_start, _ = _day_bounds(timezone.localdate())
+    week_start = timezone.now() - timedelta(days=7)
+    scans = bar.scans
+    scans_total = scans.count()
+    scans_today = scans.filter(ts__gte=day_start).count()
+    scans_7d = scans.filter(ts__gte=week_start).count()
+    last = scans.first()  # ordering -ts
+    gerant = next((m for m in members if m.role == "gerant"), None)
+    sub = getattr(bar, "subscription", None)
+    return {
+        "id": bar.id,
+        "name": bar.name,
+        "slug": bar.slug,
+        "type": bar.type,
+        "type_label": bar.get_type_display(),
+        "created_at": ms(bar.created_at),
+        "scans_total": scans_total,
+        "scans_today": scans_today,
+        "scans_7d": scans_7d,
+        "last_scan": ms(last.ts) if last else None,
+        "sub_state": sub.state if sub else "expired",
+        "sub_state_label": sub.state_label if sub else "Aucun",
+        "sub_active": bool(sub and sub.is_active),
+        "sub_days_left": sub.days_left if sub else 0,
+        "sub_end": sub.current_period_end.isoformat() if (sub and sub.current_period_end) else None,
+        "sub_suspended": bool(sub and sub.suspended),
+        "sub_is_trial": bool(sub and sub.is_trial),
+        "sub_price": float(sub.price) if sub else SUBSCRIPTION_PRICE,
+        "sub_since": sub.created_at.date().isoformat() if sub else None,  # date de souscription
+        "sub_payments": [
+            {"amount": float(p.amount), "start": p.period_start.isoformat(),
+             "end": p.period_end.isoformat(), "method": p.method, "by": p.created_by,
+             "at": ms(p.created_at)}
+            for p in bar.subscription_payments.all()[:10]
+        ],
+        "token": bar.public_token,
+        "menu_url": reverse("public_menu", args=[bar.public_token]),
+        "owner": gerant.user.username if gerant else "",
+        "members": len(members),
+        "gerants": sum(1 for m in members if m.role == "gerant"),
+        "serveurs": sum(1 for m in members if m.role == "serveur"),
+        "team": [{"id": m.id, "username": m.user.username, "role": m.role,
+                  "is_superuser": m.user.is_superuser} for m in members],
+        "sub_revenue": sub_revenue,      # CA plateforme (abonnements encaissés)
+    }
+
+
+@superuser_required
+def platform_admin(request):
+    """Page SPA de la console plateforme."""
+    return render(request, "superadmin.html", {
+        "asset_v": asset_version("superadmin.css", "superadmin.js"),
+        "price": SUBSCRIPTION_PRICE,
+    })
+
+
+def platform_bars(request):
+    """API JSON : tous les bars + stats agrégées (super-utilisateur uniquement)."""
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({"error": "Réservé à l'administrateur"}, status=403)
+    bars = Bar.objects.all().prefetch_related("members__user")
+    data = [_bar_admin_dict(b) for b in bars]
+    totals = {
+        "bars": len(data),
+        "members": sum(b["members"] for b in data),
+        "scans_total": sum(b["scans_total"] for b in data),      # affluence cumulée (scans du menu)
+        "scans_today": sum(b["scans_today"] for b in data),
+        "scans_7d": sum(b["scans_7d"] for b in data),
+        "sub_revenue": sum(b["sub_revenue"] for b in data),      # CA plateforme (abonnements)
+        "subs_active": sum(1 for b in data if b["sub_active"]),
+        "subs_expired": sum(1 for b in data if not b["sub_active"]),
+        "mrr": sum(b["sub_price"] for b in data if b["sub_active"]),  # revenu mensuel récurrent estimé
+    }
+    by_type = {}
+    for b in data:
+        by_type[b["type_label"]] = by_type.get(b["type_label"], 0) + 1
+    return JsonResponse({"bars": data, "totals": totals, "by_type": by_type, "generated": ms(timezone.now())})
+
+
+@csrf_exempt
+def admin_subscription(request, pk):
+    """POST (super-admin) : gérer l'abonnement d'un établissement.
+    body: {action, ...} — extend {months, method, note} · set_end {date} ·
+    trial {days} · set_price {price} · expire · suspend · unsuspend."""
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({"error": "Réservé à l'administrateur"}, status=403)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    bar = get_object_or_404(Bar, pk=pk)
+    sub, _ = Subscription.objects.get_or_create(bar=bar)
+    data = body(request)
+    action = data.get("action")
+    if action == "extend":
+        months = max(1, min(to_int(data.get("months"), 1) or 1, 24))
+        sub.extend(months=months, method=(data.get("method") or "manuel"),
+                   note=(data.get("note") or ""), by=request.user)
+    elif action == "set_end":
+        # Fixe la date de fin exacte (AAAA-MM-JJ) — réactive le compte si suspendu.
+        try:
+            d = datetime.strptime(str(data.get("date") or ""), "%Y-%m-%d").date()
+        except ValueError:
+            return err("Date invalide (AAAA-MM-JJ)")
+        sub.current_period_end = d
+        sub.suspended = False
+        sub.save()
+    elif action == "trial":
+        # Accorde un essai gratuit de `days` jours à partir d'aujourd'hui.
+        days = max(1, min(to_int(data.get("days"), TRIAL_DAYS), 90))
+        sub.current_period_end = timezone.localdate() + timedelta(days=days)
+        sub.is_trial = True
+        sub.suspended = False
+        sub.save()
+    elif action == "set_price":
+        sub.price = to_price(data.get("price"))
+        sub.save(update_fields=["price", "updated_at"])
+    elif action == "expire":
+        # Coupe l'accès immédiatement (fin de période fixée à hier).
+        sub.current_period_end = timezone.localdate() - timedelta(days=1)
+        sub.save(update_fields=["current_period_end", "updated_at"])
+    elif action == "suspend":
+        sub.suspended = True
+        sub.save(update_fields=["suspended", "updated_at"])
+    elif action == "unsuspend":
+        sub.suspended = False
+        sub.save(update_fields=["suspended", "updated_at"])
+    else:
+        return err("Action invalide")
+    return JsonResponse({"ok": True, "bar": _bar_admin_dict(bar)})
+
+
+@csrf_exempt
+def admin_bar_detail(request, pk):
+    """Super-admin : POST {name?, type?} modifie l'établissement ; DELETE le
+    supprime définitivement (données en cascade + comptes de l'équipe,
+    hors super-utilisateurs)."""
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({"error": "Réservé à l'administrateur"}, status=403)
+    bar = get_object_or_404(Bar, pk=pk)
+    if request.method == "POST":
+        data = body(request)
+        name = (data.get("name") or "").strip()[:120]
+        btype = data.get("type")
+        if name:
+            bar.name = name
+        if btype in dict(Bar.TYPE_CHOICES):
+            bar.type = btype
+        bar.save()
+        return JsonResponse({"ok": True, "bar": _bar_admin_dict(bar)})
+    if request.method == "DELETE":
+        users = [p.user for p in bar.members.select_related("user") if not p.user.is_superuser]
+        bar.delete()  # items, commandes, abonnement, paiements… suivent en cascade
+        for u in users:
+            u.delete()
+        return JsonResponse({"ok": True})
+    return HttpResponseNotAllowed(["POST", "DELETE"])
+
+
+@csrf_exempt
+def admin_bar_members(request, pk):
+    """Super-admin : POST {username, password, role} -> crée un membre (gérant/serveur)
+    pour cet établissement."""
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({"error": "Réservé à l'administrateur"}, status=403)
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    bar = get_object_or_404(Bar, pk=pk)
+    data = body(request)
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    role = data.get("role") if data.get("role") in ("gerant", "serveur") else "serveur"
+    if not username:
+        return err("Nom d'utilisateur requis")
+    if len(password) < 4:
+        return err("Mot de passe trop court (4 caractères minimum)")
+    if User.objects.filter(username__iexact=username).exists():
+        return err("Ce nom d'utilisateur existe déjà")
+    user = User.objects.create_user(username=username, password=password)
+    Profile.objects.create(user=user, bar=bar, role=role)
+    return JsonResponse({"ok": True, "bar": _bar_admin_dict(bar)})
+
+
+@csrf_exempt
+def admin_member_detail(request, pk):
+    """Super-admin : gérer un membre (Profile). DELETE le supprime ;
+    POST {action} : rename {username} · password {password} · role {role}."""
+    if not (request.user.is_authenticated and request.user.is_superuser):
+        return JsonResponse({"error": "Réservé à l'administrateur"}, status=403)
+    prof = get_object_or_404(Profile.objects.select_related("user", "bar"), pk=pk)
+    bar = prof.bar
+    if request.method == "DELETE":
+        if prof.user.is_superuser:
+            return err("Impossible de supprimer un super-administrateur", status=403)
+        prof.user.delete()  # supprime aussi le Profile (cascade)
+        return JsonResponse({"ok": True, "bar": _bar_admin_dict(bar)})
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST", "DELETE"])
+    data = body(request)
+    action = data.get("action")
+    if action == "rename":
+        username = (data.get("username") or "").strip()
+        if not username:
+            return err("Nom d'utilisateur requis")
+        if User.objects.filter(username__iexact=username).exclude(pk=prof.user_id).exists():
+            return err("Ce nom d'utilisateur existe déjà")
+        prof.user.username = username
+        prof.user.save(update_fields=["username"])
+    elif action == "password":
+        pwd = data.get("password") or ""
+        if len(pwd) < 4:
+            return err("Mot de passe trop court (4 caractères minimum)")
+        prof.user.set_password(pwd)
+        prof.user.save()
+    elif action == "role":
+        role = data.get("role")
+        if role not in ("gerant", "serveur"):
+            return err("Rôle invalide")
+        prof.role = role
+        prof.save(update_fields=["role"])
+    else:
+        return err("Action invalide")
+    return JsonResponse({"ok": True, "bar": _bar_admin_dict(bar)})

@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR codes des tables — {{ bar.name }}</title>
   <link rel="stylesheet" href="{% static 'home.css' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/buub.jpeg' %}">
+  <link rel="icon" href="{% static 'icons/buub.jpeg' %}">
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <script src="{% static 'pwa.js' %}" defer></script>
   <style>
     .qr-shell { max-width: 1000px; margin: 0 auto; padding: 24px; }
     .qr-controls {

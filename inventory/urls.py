@@ -11,6 +11,7 @@ urlpatterns = [
     path("serveur/", views.serveur_login, name="serveur_login"),
     path("login/", auth_views.LoginView.as_view(template_name="registration/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("bienvenue/", views.after_login, name="post_login"),  # aiguillage post-connexion
 
     # Espace du bar
     path("dashboard/", views.index, name="dashboard"),
@@ -20,6 +21,17 @@ urlpatterns = [
     path("qrcodes/", views.qrcodes, name="qrcodes"),
     path("reglages/", views.reglages, name="reglages"),
     path("gerant/", RedirectView.as_view(pattern_name="caisse", permanent=True)),
+
+    # Abonnement de l'établissement (paywall)
+    path("abonnement/", views.abonnement, name="abonnement"),
+
+    # Console plateforme (super-admin) — tous les bars inscrits
+    path("superadmin/", views.platform_admin, name="platform_admin"),
+    path("api/admin/bars/", views.platform_bars, name="admin_bars"),
+    path("api/admin/bars/<int:pk>/", views.admin_bar_detail, name="admin_bar_detail"),
+    path("api/admin/bars/<int:pk>/subscription/", views.admin_subscription, name="admin_subscription"),
+    path("api/admin/bars/<int:pk>/members/", views.admin_bar_members, name="admin_bar_members"),
+    path("api/admin/members/<int:pk>/", views.admin_member_detail, name="admin_member_detail"),
 
     # Menu public à scanner (commande client par QR code)
     path("menu/<str:token>/", views.public_menu, name="public_menu"),
@@ -36,6 +48,7 @@ urlpatterns = [
     path("api/items/<int:pk>/price/", views.item_price),
     path("api/items/<int:pk>/category/", views.item_category),
     path("api/items/<int:pk>/kind/", views.item_kind),
+    path("api/items/<int:pk>/update/", views.item_update),
     path("api/reset/", views.reset_stock),
     path("api/history/clear/", views.history_clear),
     path("api/todos/", views.todos),

@@ -59,6 +59,10 @@
   }
 
   function handleRes(res) {
+    // Abonnement expiré : le serveur renvoie 402 -> blocage total, renvoi vers le paywall.
+    if (res.status === 402) {
+      try { if (location.pathname.indexOf("/abonnement") !== 0) location.assign("/abonnement/"); } catch (e) {}
+    }
     return res.json().catch(function () { return {}; }).then(function (data) {
       if (!res.ok) {
         var e = new Error(data.error || ("Erreur serveur (" + res.status + ")"));

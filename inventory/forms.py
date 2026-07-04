@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 from django import forms
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.utils.text import slugify
 
-from .models import Bar, Profile
+from .models import Bar, Profile, Subscription, TRIAL_DAYS
 
 
 class GerantSignupForm(forms.Form):
@@ -44,6 +47,11 @@ class GerantSignupForm(forms.Form):
         )
         user = User.objects.create_user(username=email, email=email, password=self.cleaned_data["password1"])
         Profile.objects.create(user=user, bar=bar, role="gerant")
+        # Essai gratuit à l'inscription
+        Subscription.objects.create(
+            bar=bar, is_trial=True,
+            current_period_end=timezone.localdate() + timedelta(days=TRIAL_DAYS),
+        )
         return user
 
 

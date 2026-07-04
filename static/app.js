@@ -63,6 +63,10 @@
     const newCategory = $('newCategory');
     const newKind = $('newKind');
     const newPrice = $('newPrice');
+    const newCost = $('newCost');
+    const newDesc = $('newDesc');
+    const newThreshold = $('newThreshold');
+    const newBadge = $('newBadge');
     const newImage = $('newImage');
     const newCases = $('newCases');
     const newQty = $('newQty');
@@ -79,6 +83,19 @@
     const priceCancel = $('priceCancel');
     const priceClose = $('priceClose');
     let priceItemId = null;
+    // Modale édition article
+    const editModal = $('editModal');
+    const editItemName = $('editItemName');
+    const editName = $('editName');
+    const editCatInput = $('editCategory');
+    const editDesc = $('editDesc');
+    const editPriceInput = $('editPrice');
+    const editCost = $('editCost');
+    const editPromo = $('editPromo');
+    const editThreshold = $('editThreshold');
+    const editBadge = $('editBadge');
+    const editMarginHint = $('editMarginHint');
+    let editItemId = null;
     const totalItems = $('totalItems');
     const kpiArticles = $('kpiArticles');
     const kpiLow = $('kpiLow');
@@ -312,8 +329,8 @@
         group.items.forEach((item) => {
         const name = escapeHtml(item.name || 'Sans nom');
         const qty = (item.quantity != null ? item.quantity : 0);
-        const isLow = qty > 0 && qty <= 3;
         const isOut = qty === 0;
+        const isLow = !isOut && !!item.low_stock;
         const cardClass = isOut ? 'out-of-stock' : (isLow ? 'low-stock' : '');
         const qtyClass = isOut ? 'out' : (isLow ? 'low' : '');
 
@@ -325,26 +342,38 @@
         }
 
         const price = item.price || 0;
+        const onPromo = !!item.on_promo;
         const lineValue = price * qty;
         const thumb = item.image
           ? `<span class="item-thumb" style="background-image:url('${encodeURI(item.image)}')"></span>`
           : `<span class="item-thumb ph">${escapeHtml((item.name || '?').charAt(0).toUpperCase())}</span>`;
 
         const catLabel = (item.category || '').trim() || 'Sans catégorie';
+        const cost = item.cost_price || 0;
+        const marginChip = cost > 0
+          ? `<span class="item-margin ${(item.margin || 0) >= 0 ? '' : 'neg'}" title="Marge unitaire (vente − achat)">${ico('trending')} ${fmtPrice(item.margin || 0)}</span>`
+          : '';
+        const badgeLabels = { new: 'Nouveau', popular: 'Populaire', promo: 'Promo', spicy: 'Épicé', veggie: 'Végé' };
+        const badgeChip = (item.badge && badgeLabels[item.badge])
+          ? `<span class="item-badge b-${item.badge}">${badgeLabels[item.badge]}</span>` : '';
+        const priceHtml = onPromo
+          ? `<s>${fmtPrice(price)}</s> ${fmtPrice(item.promo_price)}`
+          : fmtPrice(price);
         html += `
           <div class="item-card ${cardClass}" data-id="${item.id}">
             <div class="item-info">
               ${thumb}
               <div class="item-main">
-                <span class="item-name">${name}</span>
+                <span class="item-name">${name}${badgeChip}</span>
                 <div class="item-tags">
                   <button class="item-cat" data-cat-id="${item.id}" title="Changer la catégorie">${ico('layers')} ${escapeHtml(catLabel)}</button>
                   <button class="item-kind ${item.kind === 'food' ? 'food' : 'drink'}" data-kind-id="${item.id}" title="Boisson / Nourriture (menu client)">${ico(item.kind === 'food' ? 'utensils' : 'martini')} ${item.kind === 'food' ? 'Nourriture' : 'Boisson'}</button>
+                  ${marginChip}
                 </div>
                 <span class="item-meta">${ico('clock')} ${meta}</span>
               </div>
               <span class="item-qty ${qtyClass}">${qty}</span>
-              <button class="item-price edit-price-btn" data-id="${item.id}" title="Modifier le prix unitaire">${ico('edit')} ${fmtPrice(price)}</button>
+              <button class="item-price edit-price-btn ${onPromo ? 'promo' : ''}" data-id="${item.id}" title="Modifier l'article (prix, achat, promo…)">${ico('edit')} ${priceHtml}</button>
               <span class="item-value" title="Valeur en stock">${fmtPrice(lineValue)}</span>
             </div>
             <div class="item-actions">
@@ -376,7 +405,7 @@
           else if (this.classList.contains('decrement-btn')) quickMove(id, 'out');
           else if (this.classList.contains('delete-btn')) deleteItem(id);
           else if (this.classList.contains('move-btn')) openMoveModal(id);
-          else if (this.classList.contains('edit-price-btn')) editPrice(id);
+          else if (this.classList.contains('edit-price-btn')) openEditItem(id);
         });
       });
     }
@@ -475,6 +504,57 @@
         .then(function (state) { applyState(state); showToast('Prix de ' + (item ? item.name : 'article') + ' : ' + fmtPrice(price)); })
         .catch(fail);
       closePriceModal();
+    }
+
+    // ---- Modale d'édition complète d'un article ----
+    function toNum(v) { const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+    function updateEditMargin() {
+      const p = toNum(editPriceInput.value), c = toNum(editCost.value), promo = toNum(editPromo.value);
+      const eff = (promo > 0 && promo < p) ? promo : p;
+      const m = eff - c;
+      const pct = c > 0 ? Math.round((m / c) * 100) : null;
+      let txt = 'Marge : ' + fmtPrice(m) + (pct !== null ? ' (' + pct + '%)' : '');
+      if (promo > 0 && promo < p) txt += ' · promo active';
+      editMarginHint.textContent = txt;
+      editMarginHint.classList.toggle('neg', m < 0);
+    }
+    function openEditItem(id) {
+      const item = items.find(it => it.id === id);
+      if (!item) return;
+      editItemId = id;
+      editItemName.textContent = item.name;
+      editName.value = item.name || '';
+      editCatInput.value = item.category || '';
+      editDesc.value = item.description || '';
+      editPriceInput.value = item.price || 0;
+      editCost.value = item.cost_price || 0;
+      editPromo.value = item.promo_price || 0;
+      editThreshold.value = (item.low_stock_threshold != null ? item.low_stock_threshold : 5);
+      editBadge.value = item.badge || '';
+      updateEditMargin();
+      editModal.classList.add('show');
+      setTimeout(function () { editName.focus(); }, 50);
+    }
+    function closeEditModal() { editModal.classList.remove('show'); editItemId = null; }
+    function saveEditItem() {
+      if (!editItemId) return;
+      const id = editItemId;
+      const nm = editName.value.trim();
+      if (!nm) { showToast('Nom requis', 1200); editName.focus(); return; }
+      const payload = {
+        name: nm,
+        category: editCatInput.value.trim(),
+        description: editDesc.value.trim(),
+        price: toNum(editPriceInput.value),
+        cost_price: toNum(editCost.value),
+        promo_price: toNum(editPromo.value),
+        low_stock_threshold: Math.max(0, parseInt(editThreshold.value, 10) || 0),
+        badge: editBadge.value || ''
+      };
+      apiCall('POST', '/items/' + id + '/update/', payload)
+        .then(function (state) { applyState(state); showToast('« ' + nm +' » mis à jour'); })
+        .catch(fail);
+      closeEditModal();
     }
 
     function resetStock() {
@@ -1447,14 +1527,24 @@
       if (qty < 1) qty = 1;
       let price = parseFloat((newPrice.value || '0').replace(',', '.'));
       if (isNaN(price) || price < 0) price = 0;
+      let cost = parseFloat((newCost.value || '0').replace(',', '.'));
+      if (isNaN(cost) || cost < 0) cost = 0;
       const category = (newCategory.value || '').trim();
       const kind = selectedNewKind();
+      const description = (newDesc.value || '').trim();
+      const badge = newBadge.value || '';
+      let threshold = parseInt(newThreshold.value, 10);
+      if (isNaN(threshold) || threshold < 0) threshold = 5;
 
       const file = (newImage.files && newImage.files[0]) ? newImage.files[0] : null;
-      window.BarStock.upload('/items/', { name: name, quantity: qty, price: price, category: category, kind: kind }, file)
+      window.BarStock.upload('/items/', {
+        name: name, quantity: qty, price: price, cost_price: cost, category: category,
+        kind: kind, description: description, badge: badge, low_stock_threshold: threshold
+      }, file)
         .then(function (state) {
           applyState(state);
-          newName.value = ''; newCategory.value = ''; newPrice.value = ''; newImage.value = '';
+          newName.value = ''; newCategory.value = ''; newPrice.value = ''; newCost.value = '';
+          newDesc.value = ''; newBadge.value = ''; newThreshold.value = '5'; newImage.value = '';
           newCases.value = '0'; newQty.value = '0'; updateAddHint();
           showToast(name + ' créé');
           setAddTab('reappro');
@@ -1479,6 +1569,15 @@
     priceModal.addEventListener('click', e => { if (e.target === priceModal) closePriceModal(); });
     priceInput.addEventListener('keydown', e => { if (e.key === 'Enter') savePrice(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && priceModal.classList.contains('show')) closePriceModal(); });
+
+    // Modale édition article
+    $('editConfirm').addEventListener('click', saveEditItem);
+    $('editCancel').addEventListener('click', closeEditModal);
+    $('editClose').addEventListener('click', closeEditModal);
+    editModal.addEventListener('click', e => { if (e.target === editModal) closeEditModal(); });
+    [editPriceInput, editCost, editPromo].forEach(el => el.addEventListener('input', updateEditMargin));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && editModal.classList.contains('show')) closeEditModal(); });
+
     resetBtn.addEventListener('click', resetStock);
 
     // Approvisionnement (onglets + formulaires)
@@ -1561,6 +1660,9 @@
       const opts = { method: method, headers: {} };
       if (payload !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(payload); }
       return fetch(url, opts).then(function (r) {
+        if (r.status === 402) {  // abonnement expiré -> paywall (blocage total)
+          try { location.assign('/abonnement/'); } catch (e) {}
+        }
         return r.json().catch(function () { return {}; }).then(function (data) {
           if (!r.ok) throw new Error(data.error || ('Erreur (' + r.status + ')'));
           return data;

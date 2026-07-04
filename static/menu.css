@@ -182,7 +182,21 @@ body.food-theme {
 .m-card:active::after { transform: scale(1.2) rotate(90deg); }
 .m-card-body { padding: 13px 13px 15px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .m-card-name { font-weight: 700; font-size: 1rem; line-height: 1.25; color: var(--ink); }
+.m-card-desc { font-size: .78rem; color: var(--muted); line-height: 1.3; margin-top: -1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .m-card-price { color: var(--accent); font-weight: 800; font-size: 1.12rem; letter-spacing: -.01em; }
+.m-card-price.promo s { color: var(--muted); font-weight: 600; font-size: .82rem; margin-right: 5px; }
+/* Ruban badge (coin haut-gauche de la carte) */
+.m-ribbon {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  padding: 3px 10px; border-radius: 999px; font-size: .64rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .04em; color: #fff; background: #718096;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .18);
+}
+.m-ribbon.r-new { background: #3182ce; }
+.m-ribbon.r-popular { background: #dd6b20; }
+.m-ribbon.r-promo { background: #c53030; }
+.m-ribbon.r-spicy { background: #e53e3e; }
+.m-ribbon.r-veggie { background: #2f855a; }
 .m-card-stock { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; color: var(--muted); font-weight: 600; margin-top: 1px; }
 .m-card-stock::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .m-badge {
@@ -304,6 +318,13 @@ body.food-theme {
 .m-done-card p { color: var(--ink-soft); margin-bottom: 28px; line-height: 1.5; }
 .m-again { padding: 15px 28px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 3px 10px rgba(60, 40, 20, .07); transition: transform .12s, background .15s; }
 .m-again:active { transform: scale(.96); background: var(--paper-2); }
+.m-play {
+  display: block; width: 100%; max-width: 300px; margin: 0 auto 12px; padding: 15px 28px;
+  border: 0; border-radius: 14px; cursor: pointer; font: inherit; font-weight: 800; font-size: 1.05rem;
+  background: linear-gradient(150deg, var(--accent-2), var(--accent)); color: #fff;
+  box-shadow: 0 9px 22px rgba(var(--accent-rgb), .32); transition: transform .12s;
+}
+.m-play:active { transform: scale(.97); }
 
 /* Confettis (générés en JS dans .m-done-card) */
 .m-confetti { position: absolute; top: 30px; width: 9px; height: 9px; border-radius: 2px; opacity: 0; animation: confetti 1.4s ease-out forwards; }

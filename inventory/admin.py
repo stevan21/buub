@@ -2,7 +2,15 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from .models import (Item, Movement, Todo, Archive, Order, OrderLine, Bar, Profile,
-                     PendingOrder, PendingOrderLine)
+                     PendingOrder, PendingOrderLine, Subscription, SubscriptionPayment,
+                     MenuScan)
+
+
+@admin.register(MenuScan)
+class MenuScanAdmin(admin.ModelAdmin):
+    list_display = ("bar", "table", "ts")
+    list_filter = ("bar",)
+    date_hierarchy = "ts"
 
 
 @admin.register(Bar)
@@ -21,9 +29,9 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Item)
 class ItemAdmin(admin.ModelAdmin):
-    list_display = ("thumb", "name", "category", "kind", "bar", "quantity", "price")
+    list_display = ("thumb", "name", "category", "kind", "badge", "bar", "quantity", "price", "cost_price", "promo_price")
     list_display_links = ("thumb", "name")
-    list_filter = ("bar", "kind", "category")
+    list_filter = ("bar", "kind", "badge", "category")
     search_fields = ("name", "category")
 
     @admin.display(description="Photo")
@@ -78,3 +86,17 @@ class PendingOrderAdmin(admin.ModelAdmin):
     list_filter = ("bar", "status")
     date_hierarchy = "created_at"
     inlines = [PendingOrderLineInline]
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("bar", "state_label", "current_period_end", "is_trial", "suspended", "price")
+    list_filter = ("is_trial", "suspended")
+    search_fields = ("bar__name",)
+
+
+@admin.register(SubscriptionPayment)
+class SubscriptionPaymentAdmin(admin.ModelAdmin):
+    list_display = ("bar", "amount", "period_start", "period_end", "method", "created_by", "created_at")
+    list_filter = ("bar", "method")
+    date_hierarchy = "created_at"

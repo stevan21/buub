@@ -7,6 +7,10 @@
   <meta name="description" content="BUUB : gérez le stock, la caisse et les ventes de votre bar, cave ou restaurant. Chaque établissement son espace, ses serveurs, ses archives.">
   <link rel="stylesheet" href="{% static 'home.css' %}">
   <meta name="theme-color" content="#161616">
+  <link rel="apple-touch-icon" href="{% static 'icons/buub.jpeg' %}">
+  <link rel="icon" href="{% static 'icons/buub.jpeg' %}">
+  <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+  <script src="{% static 'pwa.js' %}" defer></script>
 </head>
 <body class="public">
 
@@ -30,9 +34,8 @@
   </a>
   <div class="nav-actions">
     {% if user.is_authenticated %}
-      <a class="btn btn-gold btn-sm" href="{% url 'dashboard' %}">Mon espace <svg class="ico"><use href="#i-arrow"/></svg></a>
+      <a class="btn btn-gold btn-sm" href="{% url 'post_login' %}">Mon espace <svg class="ico"><use href="#i-arrow"/></svg></a>
     {% else %}
-      <a class="btn btn-ghost btn-sm" href="{% url 'serveur_login' %}">Espace serveur</a>
       <a class="btn btn-ghost btn-sm" href="{% url 'login' %}">Connexion</a>
       <a class="btn btn-gold btn-sm" href="{% url 'signup' %}">Créer un compte</a>
     {% endif %}

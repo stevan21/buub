@@ -126,5 +126,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Authentification (SaaS multi-bars)
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
+LOGIN_REDIRECT_URL = 'post_login'  # aiguillage selon le rôle (gérant / serveur / super-admin)
 LOGOUT_REDIRECT_URL = 'home'
