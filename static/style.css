@@ -1223,6 +1223,22 @@
     .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
     .modal-foot { padding: 14px 20px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; }
 
+    /* Modale abonnement : iframe sombre bord à bord + croix flottante */
+    .modal-abo { max-width: 600px; background: #0e1116; position: relative; }
+    .abo-frame {
+      width: 100%; height: min(78vh, 720px); border: 0; display: block;
+      background: #0e1116; border-radius: 18px;
+    }
+    .abo-x {
+      position: absolute; top: 12px; right: 12px; z-index: 2;
+      width: 34px; height: 34px; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.14);
+      color: #e6edf3; backdrop-filter: blur(4px);
+    }
+    .abo-x .ico { width: 17px; height: 17px; vertical-align: 0; }
+    .abo-x:hover { background: rgba(229,83,75,.22); border-color: rgba(229,83,75,.4); color: #ff7b73; }
+
     /* Modale large (affichage d'une archive) */
     .modal-wide { max-width: 760px; }
     #archiveModalBody { max-height: 65vh; overflow-y: auto; gap: 10px; }

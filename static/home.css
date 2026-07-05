@@ -16,29 +16,46 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ===== BARRES DE DÉFILEMENT ===== */
-* { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .22) transparent; }
+/* ===== BARRES DE DÉFILEMENT (thème doré) ===== */
+* { scrollbar-width: thin; scrollbar-color: var(--gold-2) rgba(255, 255, 255, .05); }
 ::-webkit-scrollbar { width: 12px; height: 12px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, .04);
+  border-radius: 999px;
+}
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, .2);
   border-radius: 999px;
   border: 3px solid transparent;
   background-clip: padding-box;
+  background-color: var(--gold-2);
+  background-image: linear-gradient(180deg, var(--gold) 0%, var(--gold-2) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+::-webkit-scrollbar-thumb:hover {
+  background-image: linear-gradient(180deg, #ffe45c 0%, var(--gold) 100%);
+}
+::-webkit-scrollbar-thumb:active {
+  background-image: linear-gradient(180deg, var(--gold) 0%, var(--gold-2) 100%);
+}
 ::-webkit-scrollbar-corner { background: transparent; }
 
 body.public {
   font-family: 'Segoe UI', system-ui, Arial, sans-serif;
   color: #eaf1f7;
-  background:
-    radial-gradient(1100px 600px at 80% -10%, rgba(255, 215, 0, .10), transparent 60%),
-    radial-gradient(900px 500px at -10% 20%, rgba(255, 210, 0, .18), transparent 55%),
-    linear-gradient(160deg, var(--navy) 0%, var(--navy-3) 100%);
+  background: var(--navy-3);
   min-height: 100vh;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Image de marque en arrière-plan (fixe), voilée pour rester lisible */
+body.public::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1100px 600px at 80% -10%, rgba(255, 215, 0, .12), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(255, 210, 0, .20), transparent 55%),
+    linear-gradient(160deg, rgba(14, 14, 14, .80) 0%, rgba(0, 0, 0, .90) 100%),
+    url('icons/bbu.jpeg') center center / cover no-repeat;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -77,7 +94,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ---------- Hero ---------- */
 .hero { max-width: 1180px; margin: 0 auto; padding: 56px 24px 40px; display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; }
-.hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--gold); font-weight: 700; font-size: .82rem; letter-spacing: 1.4px; text-transform: uppercase; background: rgba(255, 215, 0, .10); border: 1px solid rgba(255, 215, 0, .25); padding: 6px 13px; border-radius: 999px; }
+.hero-eyebrow { display: inline-block; color: var(--gold-2); font-weight: 600; font-size: 1.02rem; letter-spacing: normal; text-transform: none; }
 .hero h1 { font-size: clamp(2.1rem, 4.6vw, 3.4rem); line-height: 1.07; margin: 18px 0 16px; letter-spacing: -.5px; }
 .hero h1 .accent { color: var(--gold); }
 .hero p.lead { font-size: 1.14rem; color: #c4d3e0; max-width: 30em; }
@@ -102,6 +119,62 @@ a { color: inherit; text-decoration: none; }
 .hero-logo-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-logo-shine { display: none; }
 .lg-svg { width: 100%; height: 100%; display: block; }
+
+/* ---- Carte QR / logo — permutation auto (colonne droite du hero) ---- */
+.hero-swap { position: relative; display: grid; place-items: center; animation: swap-float 6s ease-in-out infinite; }
+.swap-slide {
+  grid-area: 1 / 1;                 /* les slides se superposent */
+  margin: 0; display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding: 22px 22px 20px; border-radius: 28px; width: 264px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 212, 0, .35),
+              0 0 46px rgba(255, 212, 0, .28);
+  opacity: 0; transform: translateX(46px) scale(.94); pointer-events: none;
+  transition: opacity .55s ease, transform .7s cubic-bezier(.62, .05, .2, 1);
+}
+.swap-slide.is-active { opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; z-index: 2; }
+.swap-slide.is-leaving { opacity: 0; transform: translateX(-46px) scale(.94); z-index: 1; }
+
+.qr-card { background: linear-gradient(180deg, #ffffff, #f3f4f6); }
+.logo-card { background: linear-gradient(180deg, #262626, #131313); }
+
+.qr-frame { position: relative; border-radius: 14px; overflow: hidden; background: #fff; }
+.qr-img {
+  width: 216px; height: 216px; display: block;
+  background: #fff; image-rendering: pixelated;
+}
+/* ligne de scan qui balaie le QR */
+.qr-scan {
+  position: absolute; left: 0; right: 0; top: 0; height: 26px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 206, 23, 0), rgba(255, 206, 23, .55) 60%, rgba(255, 206, 23, 0));
+  box-shadow: 0 0 16px rgba(255, 206, 23, .8);
+  animation: qr-scan 2.6s cubic-bezier(.5, 0, .5, 1) infinite;
+}
+.logo-img {
+  width: 216px; height: 216px; display: block; border-radius: 14px; object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 212, 0, .25);
+}
+.qr-cap {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: #131313; font-weight: 800; font-size: .92rem; letter-spacing: .2px;
+}
+.logo-card .qr-cap { color: var(--gold); }
+.qr-cap .ico { width: 17px; height: 17px; color: #b98900; }
+
+@keyframes qr-scan {
+  0%   { transform: translateY(-26px); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(216px); opacity: 0; }
+}
+@keyframes swap-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-swap { animation: none; }
+  .qr-scan { animation: none; opacity: 0; }
+  .swap-slide { transition: none; }
+}
 
 /* mockup côté droit */
 .mock { background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); border: 1px solid var(--line); border-radius: 22px; padding: 18px; box-shadow: 0 30px 70px rgba(0, 0, 0, .45); }
@@ -211,5 +284,14 @@ footer.public-foot .inner { max-width: 1180px; margin: 0 auto; padding: 24px; di
   .mock { display: none; }
   .hero-logo { min-height: 300px; order: -1; }
   .hero-logo-badge { width: 158px; height: 158px; border-radius: 26px; }
+  .swap-slide { width: 210px; padding: 16px 16px 14px; border-radius: 22px; gap: 12px; }
+  .qr-img, .logo-img { width: 176px; height: 176px; }
+  .qr-cap { font-size: .84rem; }
+  @keyframes qr-scan {
+    0%   { transform: translateY(-26px); opacity: 0; }
+    12%  { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { transform: translateY(176px); opacity: 0; }
+  }
   .hero-logo-glow { width: 260px; height: 260px; }
 }

@@ -322,7 +322,12 @@ def err(message, status=400):
 # ----------------------------------------------------------------------------
 def home(request):
     """Page d'accueil vitrine (landing publique)."""
-    return render(request, "home.html")
+    signup_url = request.build_absolute_uri(reverse("signup"))
+    img = qrcode.make(signup_url, box_size=8, border=2)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    qr_data_uri = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+    return render(request, "home.html", {"qr_data_uri": qr_data_uri})
 
 
 def signup(request):
@@ -430,8 +435,13 @@ def gerant(request):
 
 
 @login_required
+@xframe_options_sameorigin
 def abonnement(request):
-    """Page d'abonnement de l'établissement (statut, prix, paiement, historique)."""
+    """Page d'abonnement de l'établissement (statut, prix, paiement, historique).
+
+    Rendue en pleine page (paywall) ou embarquée dans une modale via ?modal=1
+    (le cadrage même-origine est autorisé pour l'iframe du tableau de bord).
+    """
     prof = getattr(request.user, "profile", None)
     if prof is None:
         return redirect("home")
@@ -441,6 +451,7 @@ def abonnement(request):
     return render(request, "abonnement.html", {
         "bar": bar, "role": prof.role, "sub": sub,
         "price": SUBSCRIPTION_PRICE, "payments": payments,
+        "modal": bool(request.GET.get("modal")),
     })
 
 
@@ -463,7 +474,7 @@ def reglages(request):
 def service_worker(request):
     """Service worker servi à la racine pour couvrir toute l'app (PWA)."""
     sw = """
-const CACHE = 'buub-v5';
+const CACHE = 'buub-v9';
 // Coquille pré-mise en cache : pages publiques + tous les assets de la plateforme.
 // Les pages authentifiées (caisse, dashboard, superadmin…) sont mises en cache à la
 // volée lors de la première visite (voir la stratégie navigate ci-dessous).
@@ -474,7 +485,7 @@ const SHELL = ['/', '/login/',
                '/static/superadmin.css', '/static/superadmin.js',
                '/static/manifest.webmanifest',
                '/static/icons/buub.jpeg', '/static/icons/icon-192.png', '/static/icons/icon-512.png',
-               '/static/icons/icon-maskable-512.png'];
+               '/static/icons/icon-maskable-192.png', '/static/icons/icon-maskable-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
     // addAll échoue en bloc si une URL manque -> on met en cache au mieux, une par une.

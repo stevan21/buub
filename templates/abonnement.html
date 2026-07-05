@@ -40,9 +40,12 @@
     .pay span { color:var(--muted); }
     .empty { color:var(--muted); text-align:center; padding:16px 0; }
     .note { color:var(--muted); font-size:.82rem; text-align:center; margin-top:16px; line-height:1.5; }
+    /* Embarqué dans la modale du tableau de bord : pas de chrome plein écran */
+    body.in-modal { padding:14px 14px 24px; background:#0e1116; }
+    body.in-modal .top { display:none; }
   </style>
 </head>
-<body>
+<body{% if modal %} class="in-modal"{% endif %}>
 <div class="wrap">
   <div class="top">
     <span class="logo">BUUB</span>

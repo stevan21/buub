@@ -1644,7 +1644,7 @@
     // ============================================================
     // 18b. MODALES D'ADMINISTRATION (Réglages / Équipe / QR codes)
     // ============================================================
-    const adminModals = { settings: $('settingsModal'), team: $('teamModal') };
+    const adminModals = { settings: $('settingsModal'), team: $('teamModal'), abonnement: $('abonnementModal') };
 
     function openAdminModal(name) {
       const m = adminModals[name];
@@ -1652,8 +1652,22 @@
       m.classList.add('show');
       if (name === 'settings') loadSettings();
       else if (name === 'team') loadTeam();
+      else if (name === 'abonnement') {
+        // (Re)charge la page d'abonnement embarquée à chaque ouverture (état à jour).
+        const f = $('abonnementFrame');
+        if (f) f.src = '/abonnement/?modal=1';
+      }
     }
-    function closeAdminModal(name) { if (adminModals[name]) adminModals[name].classList.remove('show'); }
+    function closeAdminModal(name) {
+      if (!adminModals[name]) return;
+      adminModals[name].classList.remove('show');
+      // Libère l'iframe pour couper le son/réseau et repartir propre au prochain coup.
+      if (name === 'abonnement') { const f = $('abonnementFrame'); if (f) f.removeAttribute('src'); }
+    }
+
+    // Le chip d'abonnement (barre latérale) ouvre la modale au lieu de naviguer.
+    const subChip = $('subChip');
+    if (subChip) subChip.addEventListener('click', function (e) { e.preventDefault(); openAdminModal('abonnement'); });
 
     // Requête JSON directe (hors couche file d'attente — actions gérant en ligne)
     function jsonFetch(method, url, payload) {

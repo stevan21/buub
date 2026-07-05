@@ -63,7 +63,7 @@
   </div>
 
   {% if sub %}
-  <a class="sub-chip s-{{ sub.state }}" href="{% url 'abonnement' %}" title="Voir l'abonnement"
+  <a class="sub-chip s-{{ sub.state }}" id="subChip" href="{% url 'abonnement' %}" title="Voir l'abonnement"
      data-sub-state="{{ sub.state }}"{% if sub.current_period_end %} data-sub-end="{{ sub.current_period_end|date:'Y-m-d' }}"{% endif %}>
     <span class="sub-chip-top">Abonnement <b>{{ sub.state_label }}</b></span>
     <span class="sub-chip-days" id="subDays">{% if sub.is_active %}{{ sub.days_left }} jour{{ sub.days_left|pluralize }} restant{{ sub.days_left|pluralize }}{% elif sub.state == 'suspended' %}Compte suspendu{% else %}Abonnement expiré{% endif %}</span>
@@ -1077,6 +1077,14 @@
     <div class="modal-foot">
       <button class="btn btn-primary" data-close="team">Fermer</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== MODALE ABONNEMENT (page embarquée en iframe) ===== -->
+<div class="modal-backdrop" id="abonnementModal">
+  <div class="modal modal-abo">
+    <button class="abo-x" data-close="abonnement" aria-label="Fermer"><svg class="ico"><use href="#i-x"></use></svg></button>
+    <iframe id="abonnementFrame" class="abo-frame" title="Abonnement" loading="lazy"></iframe>
   </div>
 </div>
 

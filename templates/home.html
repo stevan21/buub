@@ -45,7 +45,8 @@
 <!-- ===== HERO ===== -->
 <header class="hero">
   <div>
-    <h1>Gérez votre bar <span class="accent">sans effort</span>, du stock à la caisse.</h1>
+    <span class="hero-eyebrow">Que vous teniez un bar, un snack, un resto ou une cave.</span>
+    <h1>Gérez vos établissements <span class="accent">sans effort</span>, du stock à la caisse.</h1>
     <p class="lead">Suivez vos boissons, prenez les commandes, surveillez les ventes et archivez chaque journée. Chaque établissement a son espace privé — vous, vos serveurs, vos chiffres.</p>
     <div class="hero-cta">
       <a class="btn btn-gold" href="{% url 'signup' %}">Créer mon bar gratuitement <svg class="ico"><use href="#i-arrow"/></svg></a>
@@ -58,43 +59,30 @@
     </div>
   </div>
 
-  <!-- logo animé -->
-  <div class="hero-logo" aria-hidden="true">
+  <!-- carte QR / logo — permutation automatique -->
+  <div class="hero-logo">
     <span class="hero-logo-glow"></span>
-    <span class="hero-logo-badge">
-      <svg class="lg-svg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BUUB">
-        <defs>
-          <linearGradient id="lgBg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#323232"/><stop offset="1" stop-color="#131313"/>
-          </linearGradient>
-          <linearGradient id="lgYel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#ffe85f"/><stop offset="0.5" stop-color="#ffce17"/><stop offset="1" stop-color="#f0a700"/>
-          </linearGradient>
-          <linearGradient id="lgStroke" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#fff0a0"/><stop offset="1" stop-color="#df9f00"/>
-          </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="240" height="240" fill="url(#lgBg)"/>
-        <!-- éclaboussure -->
-        <path class="lg-blob" d="M120 66 C145 64 158 78 178 80 C198 82 210 96 205 113 C201 127 214 138 207 152 C200 166 181 167 171 177 C160 188 143 183 128 186 C112 189 96 185 84 180 C69 174 53 176 45 162 C38 150 45 139 39 127 C33 114 36 99 50 92 C63 85 73 73 92 69 C104 66 110 67 120 66 Z"
-              fill="#1b1b1b" stroke="url(#lgStroke)" stroke-width="5" stroke-linejoin="round"/>
-        <!-- gouttes -->
-        <g stroke="#df9f00" stroke-width="1.4" fill="url(#lgYel)">
-          <g transform="translate(120 58) scale(1.25)"><path class="lg-drop d1" d="M0,-9 C2.6,-4.5 5,-2 5,2.2 A5 5 0 1 1 -5,2.2 C-5,-2 -2.6,-4.5 0,-9 Z"/></g>
-          <g transform="translate(152 70) scale(0.6)"><path class="lg-drop d2" d="M0,-9 C2.6,-4.5 5,-2 5,2.2 A5 5 0 1 1 -5,2.2 C-5,-2 -2.6,-4.5 0,-9 Z"/></g>
-          <g transform="translate(54 112) scale(0.75)"><path class="lg-drop d3" d="M0,-9 C2.6,-4.5 5,-2 5,2.2 A5 5 0 1 1 -5,2.2 C-5,-2 -2.6,-4.5 0,-9 Z"/></g>
-          <g transform="translate(198 118) scale(0.65)"><path class="lg-drop d4" d="M0,-9 C2.6,-4.5 5,-2 5,2.2 A5 5 0 1 1 -5,2.2 C-5,-2 -2.6,-4.5 0,-9 Z"/></g>
-          <g transform="translate(116 198) rotate(180) scale(1.05)"><path class="lg-drop d5" d="M0,-9 C2.6,-4.5 5,-2 5,2.2 A5 5 0 1 1 -5,2.2 C-5,-2 -2.6,-4.5 0,-9 Z"/></g>
-          <g transform="translate(150 192) rotate(180) scale(0.6)"><path class="lg-drop d2" d="M0,-9 C2.6,-4.5 5,-2 5,2.2 A5 5 0 1 1 -5,2.2 C-5,-2 -2.6,-4.5 0,-9 Z"/></g>
-        </g>
-        <!-- texte BUUB -->
-        <g class="lg-text" font-family="'Arial Black','Segoe UI',Impact,sans-serif" font-weight="900" font-size="58" text-anchor="middle" letter-spacing="-1">
-          <text x="121" y="152" fill="#6e4d00" stroke="#6e4d00" stroke-width="2" paint-order="stroke">BUUB</text>
-          <text x="120" y="149" fill="url(#lgYel)" stroke="#bd8a00" stroke-width="1.4" paint-order="stroke">BUUB</text>
-        </g>
-      </svg>
-      <span class="hero-logo-shine"></span>
-    </span>
+    <div class="hero-swap" data-swap aria-label="Présentation BUUB">
+
+      <!-- slide 1 : QR code -->
+      <figure class="swap-slide qr-card is-active">
+        <div class="qr-frame">
+          <img class="qr-img" src="{{ qr_data_uri }}" alt="QR code pour créer un compte BUUB" width="240" height="240">
+          <span class="qr-scan" aria-hidden="true"></span>
+        </div>
+        <figcaption class="qr-cap">
+          <svg class="ico"><use href="#i-arrow"/></svg>
+          Scannez pour créer votre compte
+        </figcaption>
+      </figure>
+
+      <!-- slide 2 : logo BUUB -->
+      <figure class="swap-slide logo-card">
+        <img class="logo-img" src="{% static 'icons/buub.jpeg' %}" alt="BUUB">
+        <figcaption class="qr-cap">La gestion, sans effort</figcaption>
+      </figure>
+
+    </div>
   </div>
 </header>
 
@@ -156,6 +144,36 @@
     <span>© {% now "Y" %} BUUB — Gestion d'établissement</span>
   </div>
 </footer>
+
+<script>
+(function () {
+  var swap = document.querySelector('[data-swap]');
+  if (!swap) return;
+  var slides = swap.querySelectorAll('.swap-slide');
+  if (slides.length < 2) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var i = 0, timer;
+  function go(next) {
+    var cur = slides[i];
+    cur.classList.remove('is-active');
+    cur.classList.add('is-leaving');
+    i = (next + slides.length) % slides.length;
+    slides[i].classList.remove('is-leaving');
+    slides[i].classList.add('is-active');
+    window.setTimeout(function () { cur.classList.remove('is-leaving'); }, 750);
+  }
+  function start() { timer = window.setInterval(function () { go(i + 1); }, 3800); }
+  function stop() { window.clearInterval(timer); }
+
+  start();
+  // pause au survol / focus, reprise ensuite
+  swap.addEventListener('mouseenter', stop);
+  swap.addEventListener('mouseleave', start);
+  swap.addEventListener('focusin', stop);
+  swap.addEventListener('focusout', start);
+})();
+</script>
 
 </body>
 </html>
