@@ -4,7 +4,7 @@
 :root {
   --bg: #0e1116; --bg-2: #070a0e; --card: #161b22; --card-2: #1c232c; --side: #12161c;
   --line: rgba(255,255,255,.08); --text: #e6edf3; --muted: #8b98a5;
-  --accent: #f5a623; --accent-2: #e07b39; --accent-rgb: 245,166,35;
+  --accent: #ff7a18; --accent-2: #e8590c; --accent-rgb: 255, 122, 24;
   --green: #2ea043; --red: #e5534b; --blue: #3b82f6;
   --side-w: 250px;
 }
@@ -136,7 +136,7 @@
 .sa-member-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sa-member-sub { font-size: .76rem; color: var(--muted); }
 .sa-role { font-size: .66rem; font-weight: 800; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; flex: 0 0 auto; }
-.sa-role.gerant { background: rgba(245,166,35,.18); color: var(--accent); }
+.sa-role.gerant { background: rgba(255, 122, 24,.18); color: var(--accent); }
 .sa-role.serveur { background: rgba(59,130,246,.18); color: var(--blue); }
 
 /* Membres groupés par établissement */

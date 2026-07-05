@@ -16,10 +16,10 @@
   --primary: #161616;
   --primary-light: #2e2e2e;
   --primary-dark: #000000;
-  --accent: #ffd400;
-  --accent-light: #ffe680;
+  --accent: #ff7a18;
+  --accent-light: #ffb060;
   --accent-soft: #2a2410;
-  --gold: #e0b400;
+  --gold: #cf6a12;
 
   /* Neutres (thème sombre BUUB) */
   --bg: #0d0d0d;
@@ -232,13 +232,13 @@ html, body {
 .btn-accent {
   background: var(--accent);
   color: var(--primary-dark);
-  box-shadow: 0 2px 8px rgba(255, 212, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 122, 24, 0.3);
 }
 
 .btn-accent:hover {
   background: var(--accent-light);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(255, 212, 0, 0.35);
+  box-shadow: 0 6px 20px rgba(255, 122, 24, 0.35);
 }
 
 .btn-danger {
@@ -429,7 +429,7 @@ html, body {
 }
 .g-search:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(255, 212, 0, 0.18);
+  box-shadow: 0 0 0 3px rgba(255, 122, 24, 0.18);
 }
 .g-search > .ico { width: 18px; height: 18px; color: var(--text-muted); }
 .g-search input {
@@ -475,7 +475,7 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--accent);
-  background: linear-gradient(90deg, rgba(255, 212, 0, 0.16), rgba(255, 212, 0, 0));
+  background: linear-gradient(90deg, rgba(255, 122, 24, 0.16), rgba(255, 122, 24, 0));
   border-left: 4px solid var(--accent);
   border-radius: 8px;
 }
@@ -612,8 +612,8 @@ html, body {
 
 /* ===== COMMANDES CLIENTS (QR) EN ATTENTE ===== */
 .g-pending {
-  background: linear-gradient(135deg, rgba(255, 212, 0, 0.12), rgba(255, 212, 0, 0.03));
-  border: 1px solid rgba(255, 212, 0, 0.35);
+  background: linear-gradient(135deg, rgba(255, 122, 24, 0.12), rgba(255, 122, 24, 0.03));
+  border: 1px solid rgba(255, 122, 24, 0.35);
   border-radius: var(--radius-md);
   padding: 12px 14px;
   margin-bottom: 16px;
@@ -1300,8 +1300,8 @@ html, body {
     animation: g-pulse 1.2s ease-in-out infinite;
   }
   @keyframes g-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 212, 0, .6); }
-    70% { box-shadow: 0 0 0 7px rgba(255, 212, 0, 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 122, 24, .6); }
+    70% { box-shadow: 0 0 0 7px rgba(255, 122, 24, 0); }
   }
 
   /* Bascule des vues : une seule visible à la fois */
@@ -1328,8 +1328,8 @@ html, body {
 body,
 .gerant-body {
   background:
-    radial-gradient(1100px 600px at 0% -10%, rgba(255, 212, 0, 0.10), transparent 60%),
-    radial-gradient(1000px 600px at 100% 0%, rgba(255, 212, 0, 0.05), transparent 55%),
+    radial-gradient(1100px 600px at 0% -10%, rgba(255, 122, 24, 0.10), transparent 60%),
+    radial-gradient(1000px 600px at 100% 0%, rgba(255, 122, 24, 0.05), transparent 55%),
     linear-gradient(180deg, #0e0e0e 0%, #050505 100%);
   background-attachment: fixed;
 }
@@ -1346,7 +1346,7 @@ body,
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: 3px;
-  background: linear-gradient(90deg, #d4972a, #ffe680, #ffd400, #ffe680, #d4972a);
+  background: linear-gradient(90deg, #c2560e, #ffb060, #ff7a18, #ffb060, #c2560e);
   background-size: 200% 100%;
   animation: g-shine 4s linear infinite;
 }
@@ -1356,9 +1356,9 @@ body,
 }
 .g-topbar h1 { color: #fff; letter-spacing: -0.01em; }
 .g-logo {
-  background: linear-gradient(135deg, #ffe680 0%, #ffd400 100%);
+  background: linear-gradient(135deg, #ffb060 0%, #ff7a18 100%);
   color: #161616;
-  box-shadow: 0 6px 18px rgba(255, 212, 0, 0.45);
+  box-shadow: 0 6px 18px rgba(255, 122, 24, 0.45);
 }
 .g-clock {
   color: #fff;
@@ -1373,7 +1373,7 @@ body,
   backdrop-filter: blur(8px);
 }
 .g-actions .btn:hover {
-  background: linear-gradient(135deg, #ffe680, #ffd400);
+  background: linear-gradient(135deg, #ffb060, #ff7a18);
   color: #161616;
   border-color: transparent;
 }
@@ -1394,7 +1394,7 @@ body,
 /* Barre de recherche : focus doré */
 .g-search:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(255, 212, 0, 0.18);
+  box-shadow: 0 0 0 4px rgba(255, 122, 24, 0.18);
 }
 
 /* Cartes articles : plus vivantes */
@@ -1403,13 +1403,13 @@ body,
 }
 .g-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16), 0 0 0 3px rgba(255, 212, 0, 0.20);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.16), 0 0 0 3px rgba(255, 122, 24, 0.20);
 }
 .g-card-img { transition: transform var(--duration) var(--ease); }
 .g-card:hover .g-card-img { transform: scale(1.05); }
 .g-card-price {
   color: var(--gold);
-  background: linear-gradient(90deg, #d4972a 0%, #ffd400 60%, #b8860b 100%);
+  background: linear-gradient(90deg, #c2560e 0%, #ff7a18 60%, #8a3f08 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1417,10 +1417,10 @@ body,
 .g-card.active {
   border-color: transparent;
   background: linear-gradient(180deg, #2b2510 0%, #211c0c 100%);
-  box-shadow: 0 0 0 3px var(--accent), 0 14px 30px rgba(255, 212, 0, 0.32);
+  box-shadow: 0 0 0 3px var(--accent), 0 14px 30px rgba(255, 122, 24, 0.32);
 }
 .g-card .g-badge {
-  background: linear-gradient(135deg, #ffe680, #d4972a);
+  background: linear-gradient(135deg, #ffb060, #c2560e);
   color: #161616;
   box-shadow: 0 4px 10px rgba(212, 151, 42, 0.45);
 }
@@ -1434,15 +1434,15 @@ body,
 .btn-primary:hover { background: linear-gradient(135deg, #3a3a3a 0%, #1f1f1f 100%); }
 .btn-accent,
 .g-validate {
-  background: linear-gradient(135deg, #ffe680 0%, #ffd400 55%, #d4972a 100%);
+  background: linear-gradient(135deg, #ffb060 0%, #ff7a18 55%, #c2560e 100%);
   color: #161616;
   font-weight: 800;
-  box-shadow: 0 6px 20px rgba(255, 212, 0, 0.45);
+  box-shadow: 0 6px 20px rgba(255, 122, 24, 0.45);
 }
 .btn-accent:hover,
 .g-validate:hover {
   filter: brightness(1.06);
-  box-shadow: 0 10px 28px rgba(255, 212, 0, 0.55);
+  box-shadow: 0 10px 28px rgba(255, 122, 24, 0.55);
 }
 
 /* Panier */
@@ -1455,7 +1455,7 @@ body,
   background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
   color: #fff;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 212, 0, 0.3);
+  border: 1px solid rgba(255, 122, 24, 0.3);
   padding: 14px 18px;
 }
 .g-cart-total b { color: var(--accent); }
@@ -1478,8 +1478,8 @@ body,
     inset: 2px 8px;
     border-radius: 14px;
     z-index: -1;
-    background: linear-gradient(135deg, #ffe680, #ffd400);
-    box-shadow: 0 4px 14px rgba(255, 212, 0, 0.45);
+    background: linear-gradient(135deg, #ffb060, #ff7a18);
+    box-shadow: 0 4px 14px rgba(255, 122, 24, 0.45);
   }
 }
 
