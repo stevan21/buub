@@ -10,22 +10,35 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+# Réglages sensibles pilotés par variables d'environnement en production.
+# Les valeurs par défaut ci-dessous conviennent au développement local ;
+# en production, définir DJANGO_SECRET_KEY / DJANGO_DEBUG / DJANGO_ALLOWED_HOSTS.
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ks9n-1dox_1eo&h13e37b$6b(xsn01na29(4spk30v1hgx%c*d'
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-ks9n-1dox_1eo&h13e37b$6b(xsn01na29(4spk30v1hgx%c*d',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() not in ('0', 'false', 'no')
 
-ALLOWED_HOSTS = ['*']
+# '*' en dev ; en prod : liste d'hôtes séparés par des virgules.
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',') if h.strip()]
+
+# Origines de confiance pour la protection CSRF (requis derrière HTTPS ou port
+# non standard) : ex. "https://mon-domaine.com,http://76.13.146.34:8082".
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+
+# Le reverse-proxy nginx transmet le schéma d'origine via X-Forwarded-Proto.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -117,6 +130,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# Destination de `collectstatic` en production (servi directement par nginx).
+STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT', str(BASE_DIR / 'staticfiles'))
 
 # Fichiers média (photos des articles, uploadés depuis l'admin)
 MEDIA_URL = '/media/'
