@@ -68,6 +68,8 @@ urlpatterns = [
     path("api/team/", views.team_api),
     path("api/team/<int:pk>/", views.team_member_api),
     path("api/qrcodes/", views.qrcodes_api),
+    path("api/ads/", views.ads_api),
+    path("api/ads/<int:pk>/", views.ad_detail_api),
 
     # Archives
     path("api/archive/run/", views.archive_run),

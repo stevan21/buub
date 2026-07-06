@@ -1644,7 +1644,7 @@
     // ============================================================
     // 18b. MODALES D'ADMINISTRATION (Réglages / Équipe / QR codes)
     // ============================================================
-    const adminModals = { settings: $('settingsModal'), team: $('teamModal'), abonnement: $('abonnementModal') };
+    const adminModals = { settings: $('settingsModal'), team: $('teamModal'), abonnement: $('abonnementModal'), ads: $('adsModal') };
 
     function openAdminModal(name) {
       const m = adminModals[name];
@@ -1652,6 +1652,7 @@
       m.classList.add('show');
       if (name === 'settings') loadSettings();
       else if (name === 'team') loadTeam();
+      else if (name === 'ads') loadAds();
       else if (name === 'abonnement') {
         // (Re)charge la page d'abonnement embarquée à chaque ouverture (état à jour).
         const f = $('abonnementFrame');
@@ -1728,6 +1729,35 @@
         $('teamUser').value = ''; $('teamPass').value = '';
         renderTeam(d.serveurs); showToast('Serveur ajouté ✓');
       }).catch(fail);
+    });
+
+    // ---- Publicités du menu (carrousel) ----
+    function renderAds(ads) {
+      const grid = $('adsGrid');
+      if (!grid) return;
+      if (!ads || !ads.length) { grid.innerHTML = '<div class="ads-empty">Aucune pub pour l’instant. Ajoutez des images ci-dessous.</div>'; return; }
+      grid.innerHTML = ads.map(function (a) {
+        return '<div class="ad-cell" style="background-image:url(' + a.url + ')">'
+          + '<button class="ad-del" data-id="' + a.id + '" aria-label="Supprimer">' + ico('x') + '</button></div>';
+      }).join('');
+      grid.querySelectorAll('.ad-del').forEach(function (b) {
+        b.addEventListener('click', function () {
+          jsonFetch('DELETE', '/api/ads/' + this.getAttribute('data-id') + '/').then(function (d) { renderAds(d.ads); showToast('Pub supprimée'); }).catch(fail);
+        });
+      });
+    }
+    function loadAds() { jsonFetch('GET', '/api/ads/').then(function (d) { renderAds(d.ads); }).catch(fail); }
+    const adsFile = $('adsFile');
+    if (adsFile) adsFile.addEventListener('change', function () {
+      if (!this.files || !this.files.length) return;
+      const fd = new FormData();
+      for (let i = 0; i < this.files.length; i++) fd.append('images', this.files[i]);
+      const input = this;
+      showToast('Envoi…', 1200);
+      fetch('/api/ads/', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { renderAds(d.ads); input.value = ''; showToast('Pub(s) ajoutée(s) ✓'); })
+        .catch(function () { showToast('Échec de l’envoi', 1800); });
     });
 
     // ---- QR codes ----

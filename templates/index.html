@@ -122,6 +122,7 @@
       <div class="acct">
         <span class="acct-bar" title="Votre établissement"><img class="acct-logo-img" src="{% static 'icons/buub.jpeg' %}" alt="BUUB"> {{ bar.name }}</span>
         <button type="button" class="acct-link" data-modal="team" title="Gérer l'équipe"><svg class="ico"><use href="#i-clipboard"></use></svg><span>Équipe</span></button>
+        <button type="button" class="acct-link" data-modal="ads" title="Publicités du menu (carrousel)"><svg class="ico"><use href="#i-image"></use></svg><span>Pubs</span></button>
         <button type="button" class="acct-link" data-modal="settings" title="Réglages de l'établissement"><svg class="ico"><use href="#i-settings"></use></svg><span>Réglages</span></button>
         {% if user.is_superuser %}<a class="acct-link" href="{% url 'platform_admin' %}" title="Console plateforme (super-admin)"><svg class="ico"><use href="#i-grid"></use></svg><span>Console</span></a>{% endif %}
         <form method="post" action="{% url 'logout' %}" class="acct-logout">{% csrf_token %}<button type="submit" title="Se déconnecter"><svg class="ico"><use href="#i-x"></use></svg><span>Déconnexion</span></button></form>
@@ -1076,6 +1077,27 @@
     </div>
     <div class="modal-foot">
       <button class="btn btn-primary" data-close="team">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODALE PUBLICITÉS (carrousel du menu) ===== -->
+<div class="modal-backdrop" id="adsModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="ttl"><svg class="ico"><use href="#i-image"></use></svg> Publicités du menu</span>
+      <button class="x-btn" data-close="ads" aria-label="Fermer"><svg class="ico"><use href="#i-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="ads-note">Ces images défilent en haut du <b>menu que voient vos clients</b> (promos, événements, boisson du moment…).</p>
+      <div class="ads-grid" id="adsGrid"></div>
+      <label class="ads-add">
+        <input type="file" id="adsFile" accept="image/*" multiple hidden>
+        <svg class="ico"><use href="#i-plus"></use></svg> Ajouter des images
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" data-close="ads">Terminé</button>
     </div>
   </div>
 </div>

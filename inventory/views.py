@@ -482,7 +482,7 @@ def reglages(request):
 def service_worker(request):
     """Service worker servi à la racine pour couvrir toute l'app (PWA)."""
     sw = """
-const CACHE = 'buub-v13';
+const CACHE = 'buub-v14';
 // Coquille pré-mise en cache : pages publiques + tous les assets de la plateforme.
 // Les pages authentifiées (caisse, dashboard, superadmin…) sont mises en cache à la
 // volée lors de la première visite (voir la stratégie navigate ci-dessous).
@@ -1146,6 +1146,33 @@ def team_member_api(request, pk):
     serveurs = [{"id": p.id, "username": p.user.username}
                 for p in Profile.objects.filter(bar=bar, role="serveur").select_related("user")]
     return JsonResponse({"serveurs": serveurs})
+
+
+@csrf_exempt
+@api_gerant_required
+def ads_api(request):
+    """GET : liste des pubs du menu. POST (multipart, champ 'images') : ajoute une ou
+    plusieurs images publicitaires du carrousel. Renvoie la liste à jour."""
+    bar = request.bar
+    if request.method == "POST":
+        for f in request.FILES.getlist("images"):
+            MenuAd.objects.create(bar=bar, image=f)
+    elif request.method != "GET":
+        return HttpResponseNotAllowed(["GET", "POST"])
+    ads = [{"id": a.id, "url": a.image.url} for a in bar.ads.all()]
+    return JsonResponse({"ads": ads})
+
+
+@csrf_exempt
+@api_gerant_required
+def ad_detail_api(request, pk):
+    """DELETE : supprime une pub du menu, renvoie la liste à jour."""
+    if request.method != "DELETE":
+        return HttpResponseNotAllowed(["DELETE"])
+    bar = request.bar
+    MenuAd.objects.filter(bar=bar, id=pk).delete()
+    ads = [{"id": a.id, "url": a.image.url} for a in bar.ads.all()]
+    return JsonResponse({"ads": ads})
 
 
 # ----------------------------------------------------------------------------

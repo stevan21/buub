@@ -1239,6 +1239,27 @@
     .abo-x .ico { width: 17px; height: 17px; vertical-align: 0; }
     .abo-x:hover { background: rgba(229,83,75,.22); border-color: rgba(229,83,75,.4); color: #ff7b73; }
 
+    /* Modale Publicités du menu */
+    .ads-note { color: var(--muted); font-size: .88rem; line-height: 1.5; }
+    .ads-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .ads-grid:empty { display: none; }
+    .ads-empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 14px; font-size: .9rem; }
+    .ad-cell { position: relative; aspect-ratio: 16 / 9; border-radius: 12px; background: #0d1a24 center / cover no-repeat; border: 1px solid var(--line); overflow: hidden; }
+    .ad-del {
+      position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; border: 0;
+      background: rgba(0,0,0,.55); color: #fff;
+    }
+    .ad-del .ico { width: 15px; height: 15px; vertical-align: 0; }
+    .ad-del:hover { background: var(--red); }
+    .ads-add {
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer; align-self: flex-start;
+      padding: 11px 16px; border-radius: 12px; font-weight: 700; font-size: .92rem;
+      color: var(--gold); background: rgba(255,122,24,.10); border: 1.5px dashed rgba(255,122,24,.5);
+    }
+    .ads-add:hover { background: rgba(255,122,24,.16); }
+    .ads-add .ico { width: 17px; height: 17px; }
+
     /* Modale large (affichage d'une archive) */
     .modal-wide { max-width: 760px; }
     #archiveModalBody { max-height: 65vh; overflow-y: auto; gap: 10px; }
