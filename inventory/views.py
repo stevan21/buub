@@ -462,7 +462,7 @@ def reglages(request):
     bar = current_bar(request)
     saved = False
     if request.method == "POST":
-        form = BarSettingsForm(request.POST, instance=bar)
+        form = BarSettingsForm(request.POST, request.FILES, instance=bar)
         if form.is_valid():
             form.save()
             saved = True
@@ -917,6 +917,30 @@ def asset_version(*names):
     return latest
 
 
+def _hex_to_rgb(h):
+    """'#ff7a18' -> (255, 122, 24). Tolère #rgb et retourne l'orange BUUB si invalide."""
+    h = (h or "").lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    except (ValueError, IndexError):
+        return (255, 122, 24)
+
+
+def menu_theme(bar):
+    """Variables de couleur du menu client : accent choisi par le bar (ou orange),
+    sa version RGB, et une variante plus claire pour les dégradés."""
+    accent = bar.accent                       # hex effectif (#ff7a18 par défaut)
+    r, g, b = _hex_to_rgb(accent)
+    light = tuple(round(c + (255 - c) * 0.30) for c in (r, g, b))   # 30 % vers le blanc
+    return {
+        "menu_accent": accent,
+        "menu_accent_2": "#%02x%02x%02x" % light,
+        "menu_accent_rgb": "%d, %d, %d" % (r, g, b),
+    }
+
+
 def public_menu(request, token):
     """Page publique : menu d'un bar à scanner (aucune connexion requise)."""
     bar = get_object_or_404(Bar, public_token=token)
@@ -934,6 +958,7 @@ def public_menu(request, token):
         "bar": bar, "token": token, "table": table,
         "categories": bar.category_suggestions(),
         "asset_v": asset_version("menu.css", "menu.js", "games.css", "games.js"),
+        **menu_theme(bar),
     })
     # HTML toujours revalidé → le client récupère toujours la dernière version
     # des assets (?v=…), même après un changement de design.

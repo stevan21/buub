@@ -56,11 +56,15 @@ class GerantSignupForm(forms.Form):
 
 
 class BarSettingsForm(forms.ModelForm):
-    """Réglages de l'établissement : nom + type (modifiable par le gérant)."""
+    """Réglages de l'établissement : nom, type, et personnalisation du menu client
+    (couleur d'accent + bannière)."""
     class Meta:
         model = Bar
-        fields = ["name", "type"]
-        labels = {"name": "Nom de l'établissement", "type": "Type d'établissement"}
+        fields = ["name", "type", "accent_color", "cover"]
+        labels = {
+            "name": "Nom de l'établissement", "type": "Type d'établissement",
+            "accent_color": "Couleur du menu", "cover": "Bannière du menu",
+        }
 
 
 class ServeurForm(forms.Form):

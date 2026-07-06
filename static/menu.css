@@ -10,9 +10,9 @@
   --ink: #2c2018;            /* texte principal (brun très foncé) */
   --ink-soft: #5b4d40;       /* texte secondaire chaud */
   --muted: #93826f;          /* gris taupe */
-  --accent: #c75f1c;         /* terracotta */
-  --accent-2: #e2913a;       /* ambre */
-  --accent-rgb: 199, 95, 28;
+  --accent: #ff7a18;         /* orange BUUB (surchargé par établissement dans <head>) */
+  --accent-2: #ff9d4d;       /* orange clair (dégradés) */
+  --accent-rgb: 255, 122, 24;
   --ok: #2f8f4e;             /* vert "frais" */
   --line: rgba(44, 32, 24, .12);
   --shadow: rgba(60, 40, 20, .14);
@@ -79,6 +79,22 @@
 .m-table .ico { width: 15px; height: 15px; animation: pinDrop .6s var(--spring) .3s both; }
 @keyframes tablePop { 0% { opacity: 0; transform: scale(.5) translateY(-6px); } 60% { transform: scale(1.08); } 100% { opacity: 1; transform: none; } }
 @keyframes pinDrop { 0% { transform: translateY(-7px); opacity: 0; } 60% { transform: translateY(2px); } 100% { transform: translateY(0); opacity: 1; } }
+
+/* ---- Bannière de couverture (photo d'ambiance, optionnelle) ---- */
+.m-cover {
+  position: relative; height: 200px; margin: 0;
+  background-size: cover; background-position: center;
+  display: flex; align-items: flex-end;
+  border-bottom: 1px solid var(--line);
+  animation: coverIn .6s var(--spring) both;
+}
+@keyframes coverIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+.m-cover-txt { padding: 16px 18px; color: #fff; width: 100%; }
+.m-cover-name {
+  display: block; font-size: 1.85rem; font-weight: 900; letter-spacing: -.02em; line-height: 1.05;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .55);
+}
+.m-cover-sub { display: block; margin-top: 3px; font-size: .86rem; font-weight: 600; opacity: .94; text-shadow: 0 1px 8px rgba(0, 0, 0, .5); }
 
 /* ---- Recherche (pilule stylée) ---- */
 .m-search { position: relative; margin: 16px 16px 4px; }
@@ -183,7 +199,12 @@ body.food-theme {
 .m-card-body { padding: 13px 13px 15px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .m-card-name { font-weight: 700; font-size: 1rem; line-height: 1.25; color: var(--ink); }
 .m-card-desc { font-size: .78rem; color: var(--muted); line-height: 1.3; margin-top: -1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.m-card-price { color: var(--accent); font-weight: 800; font-size: 1.12rem; letter-spacing: -.01em; }
+.m-card-price {
+  align-self: flex-start; margin-top: 3px; color: var(--accent);
+  font-weight: 800; font-size: 1.06rem; letter-spacing: -.01em;
+  padding: 3px 10px; border-radius: 9px; background: rgba(var(--accent-rgb), .10);
+}
+.m-card-price.promo { background: rgba(197, 48, 48, .10); color: #c53030; }
 .m-card-price.promo s { color: var(--muted); font-weight: 600; font-size: .82rem; margin-right: 5px; }
 /* Ruban badge (coin haut-gauche de la carte) */
 .m-ribbon {
@@ -347,6 +368,7 @@ body.food-theme {
 @media (min-width: 620px) {
   .m-grid { grid-template-columns: repeat(3, 1fr); max-width: 760px; margin: 0 auto; }
   .m-search, .m-top { max-width: 760px; margin-left: auto; margin-right: auto; }
+  .m-cover { max-width: 760px; margin: 16px auto 0; height: 240px; border-radius: 20px; border: 1px solid var(--line); }
   .m-cartbar { max-width: 730px; left: 50%; transform: translateX(-50%); }
   .m-cartbar.in { animation: cartInD .4s var(--spring); }
   @keyframes cartInD { from { transform: translateX(-50%) translateY(120%); } to { transform: translateX(-50%) translateY(0); } }

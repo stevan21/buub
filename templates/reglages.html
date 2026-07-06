@@ -30,7 +30,7 @@
 <div class="team-shell">
   <a class="back-link" href="{% url 'dashboard' %}"><svg class="ico"><use href="#i-arrow-left"/></svg> Retour au tableau de bord</a>
   <h1>Réglages</h1>
-  <p class="sub">Nom et type de votre établissement. Le type adapte le vocabulaire et les catégories suggérées.</p>
+  <p class="sub">Nom, type, et personnalisation du <b>menu que voient vos clients</b> (couleur et bannière).</p>
 
   {% if saved %}
     <div class="errors" style="background:rgba(47,133,90,.16);border-color:rgba(47,133,90,.4);color:#9be8bd">
@@ -39,7 +39,7 @@
   {% endif %}
 
   <div class="panel">
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
       <div class="field">
         <label for="id_name">Nom de l'établissement</label>
@@ -59,9 +59,39 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="id_accent">Couleur du menu client</label>
+        <div class="color-row">
+          <input type="color" name="accent_color" id="id_accent" value="{{ form.accent_color.value|default:'#ff7a18' }}">
+          <span class="color-hint">La couleur des boutons, prix et accents sur le menu à scanner. Par défaut : orange BUUB.</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Bannière du menu <span style="color:var(--muted);font-weight:500">(optionnel)</span></label>
+        {% if form.cover.value %}
+          <div class="cover-preview" style="background-image:url('{{ bar.cover.url }}')"></div>
+          <label class="cover-clear"><input type="checkbox" name="cover-clear"> Retirer la bannière actuelle</label>
+        {% endif %}
+        <input type="file" name="cover" accept="image/*" class="file-input">
+        <div class="help" style="color:var(--muted)">Photo d'ambiance affichée en haut du menu (façade, salle, plat signature…). Idéal : format large.</div>
+        {% for e in form.cover.errors %}<div class="help" style="color:#ffb4b4">{{ e }}</div>{% endfor %}
+      </div>
+
       <button class="btn btn-gold btn-block" type="submit">Enregistrer</button>
     </form>
   </div>
+
+  <style>
+    .color-row { display:flex; align-items:center; gap:14px; }
+    #id_accent { width:56px; height:44px; padding:0; border:1px solid var(--line); border-radius:12px; background:transparent; cursor:pointer; }
+    .color-hint { color:var(--muted); font-size:.86rem; line-height:1.4; }
+    .cover-preview { height:120px; border-radius:14px; border:1px solid var(--line); background-size:cover; background-position:center; margin-bottom:10px; }
+    .cover-clear { display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:.88rem; margin-bottom:10px; cursor:pointer; }
+    .cover-clear input { width:auto; }
+    .file-input { padding:11px; color:var(--muted); }
+    .file-input::file-selector-button { margin-right:12px; border:0; border-radius:10px; padding:9px 14px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,var(--gold),var(--gold-2)); color:var(--navy-3); }
+  </style>
 </div>
 
 </body>

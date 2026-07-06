@@ -51,6 +51,11 @@ class Bar(models.Model):
     slug = models.SlugField(unique=True)
     type = models.CharField("Type d'établissement", max_length=12, choices=TYPE_CHOICES, default="bar")
     public_token = models.CharField(max_length=32, unique=True, default=generate_token, editable=False)
+    # Personnalisation du menu client (page à scanner)
+    accent_color = models.CharField(
+        "Couleur d'accent du menu", max_length=7, blank=True, default="",
+        help_text="Couleur du menu client, ex. #ff7a18. Laisser vide = orange BUUB.")
+    cover = models.ImageField("Bannière du menu", upload_to="covers/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -58,6 +63,12 @@ class Bar(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def accent(self):
+        """Couleur d'accent effective du menu (personnalisée ou orange BUUB par défaut)."""
+        c = (self.accent_color or "").strip()
+        return c if c.startswith("#") and len(c) in (4, 7) else "#ff7a18"
 
     @property
     def noun(self):
