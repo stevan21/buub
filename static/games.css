@@ -131,3 +131,8 @@
   background: radial-gradient(circle at 50% 45%, #fffdf9, #f0e6d4);
   box-shadow: 0 12px 30px rgba(60,40,20,.2), inset 0 0 0 1px rgba(44,32,24,.08);
 }
+.bg-billard { width: min(92vw, 400px); }
+.bg-billard canvas {
+  width: 100%; height: auto; display: block; border-radius: 18px; touch-action: none;
+  box-shadow: 0 14px 32px rgba(30,18,8,.35), inset 0 0 0 1px rgba(0,0,0,.15);
+}

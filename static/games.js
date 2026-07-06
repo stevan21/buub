@@ -16,6 +16,7 @@
     dames: ic('<ellipse cx="12" cy="15.3" rx="7.3" ry="2.9"/><path d="M4.7 15.3v-3.6a7.3 2.9 0 0 1 14.6 0v3.6"/><ellipse cx="12" cy="8.4" rx="7.3" ry="2.9"/>'),
     chess: ic('<circle cx="12" cy="5" r="2.4"/><path d="M9.5 9.6h5l-1 4.2h-3z"/><path d="M6.6 20.5l1-6.7h8.8l1 6.7z"/><path d="M5 20.5h14"/>'),
     zuma: ic('<circle cx="8" cy="9" r="3.1"/><circle cx="16" cy="9" r="3.1"/><circle cx="12" cy="15.6" r="3.1"/>'),
+    billard: ic('<circle cx="8" cy="15.5" r="4.6"/><line x1="11.4" y1="12.1" x2="21" y2="2.5"/><path d="M17.8 5.7 21 2.5"/>'),
     cpu: ic('<rect x="6" y="6" width="12" height="12" rx="1.5"/><rect x="9.5" y="9.5" width="5" height="5" rx=".5"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2"/>'),
     users: ic('<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M18.5 20a5.5 5.5 0 0 0-3.4-5.1"/>')
   };
@@ -454,9 +455,301 @@
     requestAnimationFrame(frame);
   }
 
+  /* ============================ BILLARD ============================ */
+  function buildBillard(view) {
+    var mode = 'ai';
+    var status = E('div', 'bg-status', '');
+    var wrap = E('div', 'bg-billard');
+    var canvas = document.createElement('canvas');
+    wrap.appendChild(canvas);
+
+    var Wt = Math.min(window.innerWidth * 0.92, 400); Wt = Math.round(Wt);
+    var Ht = Math.round(Wt * 1.55);
+    canvas.width = Wt; canvas.height = Ht;
+    var ctx = canvas.getContext('2d');
+
+    var M = Math.round(Wt * 0.08);
+    var L = M, Rr = Wt - M, T = M, Bb = Ht - M, MIDY = (T + Bb) / 2;
+    var BR = Math.max(8, Math.round(Wt * 0.03));
+    var POCK = BR * 1.75;
+    var MAXV = Wt * 6.5, maxPull = Wt * 0.5;
+    var pockets = [[L, T], [Rr, T], [L, Bb], [Rr, Bb], [L, MIDY], [Rr, MIDY]];
+    var COL = { 1: '#f4c430', 2: '#1e56c8', 3: '#d8332a', 4: '#7b2d8b', 5: '#e8720c', 6: '#1f8a4c', 7: '#8a3324', 8: '#151515', 9: '#f4c430', 10: '#1e56c8', 11: '#d8332a', 12: '#7b2d8b', 13: '#e8720c', 14: '#1f8a4c', 15: '#8a3324' };
+    function typeOf(n) { return n === 0 ? 'cue' : n === 8 ? 'eight' : n < 8 ? 'solid' : 'stripe'; }
+
+    var balls, cur, groups, open, phase, ballInHand, placing, aiming, aimX, aimY, over, winner, running = true, last = 0, msg = '';
+    var firstHit, contact, railHit, pots, cueScratch;
+
+    function cueB() { return balls[0]; }
+    function home() { return [(L + Rr) / 2, Bb - (Bb - T) * 0.2]; }
+    function moving() { for (var i = 0; i < balls.length; i++) { var b = balls[i]; if (!b.potted && (b.vx || b.vy)) return true; } return false; }
+    function other(p) { return p ? 0 : 1; }
+    function pName(p) { return mode === 'ai' ? (p === 0 ? 'Toi' : 'Ordi') : ('Joueur ' + (p + 1)); }
+    function gLabel(g) { return g === 'solid' ? 'pleines' : g === 'stripe' ? 'rayées' : ''; }
+    function gRemain(g) { if (!g) return 99; var n = 0; for (var i = 1; i < balls.length; i++) { var b = balls[i]; if (b.type === g && !b.potted) n++; } return n; }
+    function pottedOf(tp) { var n = 0; for (var i = 0; i < pots.length; i++) if (pots[i].type === tp) n++; return n; }
+
+    function setStatus() {
+      var s;
+      if (over) s = pName(winner) + ' gagne ! 🎉';
+      else {
+        s = pName(cur);
+        var g = groups[cur];
+        s += g ? ' · ' + gLabel(g) + ' (' + gRemain(g) + ')' : ' · table ouverte';
+        if (ballInHand) s += ' · bille en main';
+        if (msg) s = msg + ' · ' + s;
+      }
+      status.textContent = s;
+    }
+
+    function newShot() { firstHit = null; contact = false; railHit = false; pots = []; cueScratch = false; }
+
+    function setup() {
+      balls = [];
+      var h = home();
+      balls.push({ num: 0, type: 'cue', col: '#fdfdfd', x: h[0], y: h[1], vx: 0, vy: 0, r: BR, potted: false });
+      var nums = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15];
+      for (var a = nums.length - 1; a > 0; a--) { var bi = Math.floor(Math.random() * (a + 1)); var t = nums[a]; nums[a] = nums[bi]; nums[bi] = t; }
+      var apexX = (L + Rr) / 2, apexY = T + (Bb - T) * 0.22, idx = 0, ni = 0;
+      for (var row = 0; row < 5; row++) {
+        for (var c = 0; c <= row; c++) {
+          var x = apexX + (c - row / 2) * (BR * 2.04), y = apexY + row * (BR * 1.77);
+          var num = idx === 4 ? 8 : nums[ni++];
+          balls.push({ num: num, type: typeOf(num), col: COL[num], x: x, y: y, vx: 0, vy: 0, r: BR, potted: false });
+          idx++;
+        }
+      }
+      cur = 0; groups = [null, null]; open = true; phase = 'aim';
+      ballInHand = false; placing = false; aiming = false; over = false; winner = -1;
+      newShot(); msg = 'Casse !'; setStatus();
+      if (mode === 'ai' && cur === 1) scheduleAI();
+    }
+
+    function shoot(dx, dy, power) {
+      newShot(); var d = Math.hypot(dx, dy) || 1; var cb = cueB();
+      cb.vx = dx / d * MAXV * power; cb.vy = dy / d * MAXV * power; phase = 'rolling'; msg = ''; vib(12);
+    }
+
+    function step(dt) {
+      var i, b, damp = Math.max(0, 1 - 2.0 * dt);
+      for (i = 0; i < balls.length; i++) {
+        b = balls[i]; if (b.potted) continue;
+        b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= damp; b.vy *= damp;
+        if (Math.abs(b.vx) < 2) b.vx = 0; if (Math.abs(b.vy) < 2) b.vy = 0;
+        var pk, done = false;
+        for (pk = 0; pk < pockets.length; pk++) {
+          if (Math.hypot(b.x - pockets[pk][0], b.y - pockets[pk][1]) < POCK) {
+            b.potted = true; b.vx = b.vy = 0; if (b.type === 'cue') cueScratch = true; pots.push(b); vib(15); done = true; break;
+          }
+        }
+        if (done) continue;
+        if (b.x - b.r < L) { b.x = L + b.r; b.vx = -b.vx * 0.85; if (contact) railHit = true; }
+        if (b.x + b.r > Rr) { b.x = Rr - b.r; b.vx = -b.vx * 0.85; if (contact) railHit = true; }
+        if (b.y - b.r < T) { b.y = T + b.r; b.vy = -b.vy * 0.85; if (contact) railHit = true; }
+        if (b.y + b.r > Bb) { b.y = Bb - b.r; b.vy = -b.vy * 0.85; if (contact) railHit = true; }
+      }
+      for (i = 0; i < balls.length; i++) {
+        var a2 = balls[i]; if (a2.potted) continue;
+        for (var jj = i + 1; jj < balls.length; jj++) {
+          var c2 = balls[jj]; if (c2.potted) continue;
+          var dx = c2.x - a2.x, dy = c2.y - a2.y, dist = Math.hypot(dx, dy), mn = a2.r + c2.r;
+          if (dist > 0 && dist < mn) {
+            var nx = dx / dist, ny = dy / dist, ov = (mn - dist) / 2;
+            a2.x -= nx * ov; a2.y -= ny * ov; c2.x += nx * ov; c2.y += ny * ov;
+            var rel = (c2.vx - a2.vx) * nx + (c2.vy - a2.vy) * ny;
+            if (rel < 0) {
+              a2.vx += rel * nx; a2.vy += rel * ny; c2.vx -= rel * nx; c2.vy -= rel * ny;
+              if (!firstHit) { if (a2.type === 'cue') firstHit = c2; else if (c2.type === 'cue') firstHit = a2; if (firstHit) contact = true; }
+              vib(4);
+            }
+          }
+        }
+      }
+      if (phase === 'rolling' && !moving()) resolve();
+    }
+
+    function resolve() {
+      phase = 'eval';
+      var me = cur, g = groups[me], i;
+      var remBefore = g ? gRemain(g) + pottedOf(g) : 99;
+      if (cueScratch) cueB().potted = false;                 // on récupère la blanche
+      var foul = false, reason = '';
+      if (cueScratch) { foul = true; reason = 'blanche empochée'; }
+      else if (!firstHit) { foul = true; reason = 'aucune bille touchée'; }
+      else if (open) { if (firstHit.type === 'eight') { foul = true; reason = 'pas la 8 en premier'; } }
+      else {
+        var mustEight = g && remBefore === 0;
+        if (mustEight) { if (firstHit.type !== 'eight') { foul = true; reason = 'vise la 8'; } }
+        else if (firstHit.type === 'eight') { foul = true; reason = 'pas la 8 en premier'; }
+        else if (g && firstHit.type !== g) { foul = true; reason = 'mauvais groupe'; }
+      }
+      if (!foul && firstHit && pots.length === 0 && !railHit) { foul = true; reason = 'aucune bande'; }
+
+      var eight = false; for (i = 0; i < pots.length; i++) if (pots[i].type === 'eight') eight = true;
+      if (eight) {
+        over = true;
+        var clearedBefore = g && remBefore === 0;
+        winner = (clearedBefore && !foul) ? me : other(me);
+        vib([10, 40, 90]); phase = 'over'; setStatus(); return;
+      }
+
+      if (!foul && open) {
+        var own = null;
+        for (i = 0; i < pots.length; i++) { var tp = pots[i].type; if (tp === 'solid' || tp === 'stripe') { own = pots[i]; break; } }
+        if (own) { groups[me] = own.type; groups[other(me)] = own.type === 'solid' ? 'stripe' : 'solid'; open = false; g = groups[me]; }
+      }
+
+      if (foul) {
+        cur = other(me); ballInHand = true;
+        var hh = home(), cb = cueB(); cb.x = hh[0]; cb.y = hh[1]; cb.vx = cb.vy = 0;
+        msg = 'Faute (' + reason + ')';
+      } else {
+        var g2 = groups[me], mine = false;
+        if (g2) for (i = 0; i < pots.length; i++) if (pots[i].type === g2) mine = true;
+        if (mine) msg = 'Rejoue !';
+        else { cur = other(me); msg = ''; }
+      }
+      phase = 'aim'; setStatus();
+      if (!over && mode === 'ai' && cur === 1) scheduleAI();
+    }
+
+    /* ---- IA (visée « bille fantôme » vers une poche) ---- */
+    function aiTargets() {
+      var g = groups[cur], list = [];
+      for (var i = 1; i < balls.length; i++) {
+        var b = balls[i]; if (b.potted) continue;
+        if (open) { if (b.type !== 'eight') list.push(b); }
+        else if (g && gRemain(g) > 0) { if (b.type === g) list.push(b); }
+        else { if (b.type === 'eight') list.push(b); }
+      }
+      return list;
+    }
+    function blocked(x0, y0, x1, y1, ign) {
+      for (var i = 0; i < balls.length; i++) {
+        var b = balls[i]; if (b.potted || b === ign || b.type === 'cue') continue;
+        var dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy; if (len2 < 1) continue;
+        var tt = ((b.x - x0) * dx + (b.y - y0) * dy) / len2; if (tt < 0.02 || tt > 0.99) continue;
+        if (Math.hypot(b.x - (x0 + dx * tt), b.y - (y0 + dy * tt)) < BR * 1.9) return true;
+      }
+      return false;
+    }
+    function aiChoose() {
+      var cb = cueB(), best = null, ts = aiTargets();
+      for (var ti = 0; ti < ts.length; ti++) {
+        var t = ts[ti];
+        for (var pi = 0; pi < pockets.length; pi++) {
+          var p = pockets[pi];
+          var tpx = p[0] - t.x, tpy = p[1] - t.y, tpd = Math.hypot(tpx, tpy) || 1, ux = tpx / tpd, uy = tpy / tpd;
+          var gx = t.x - ux * BR * 2, gy = t.y - uy * BR * 2;
+          var cgx = gx - cb.x, cgy = gy - cb.y, cgd = Math.hypot(cgx, cgy) || 1;
+          if ((cgx / cgd) * ux + (cgy / cgd) * uy < 0.25) continue;      // angle trop fermé
+          if (blocked(cb.x, cb.y, gx, gy, t)) continue;
+          if (blocked(t.x, t.y, p[0], p[1], t)) continue;
+          var score = ((cgx / cgd) * ux + (cgy / cgd) * uy) * 2 - cgd / Wt - tpd / Wt;
+          if (!best || score > best.score) best = { dx: cgx, dy: cgy, power: Math.min(1, 0.4 + (cgd + tpd) / (Wt * 1.7)), score: score };
+        }
+      }
+      return best;
+    }
+    function aiPlay() {
+      if (over || phase !== 'aim' || !(mode === 'ai' && cur === 1)) return;
+      if (ballInHand) { var hh = home(), c0 = cueB(); c0.x = hh[0]; c0.y = hh[1]; ballInHand = false; setStatus(); }
+      var s = aiChoose(), cb = cueB();
+      if (s) { var ang = Math.atan2(s.dy, s.dx) + (Math.random() - 0.5) * 0.07, mag = Math.hypot(s.dx, s.dy); shoot(Math.cos(ang) * mag, Math.sin(ang) * mag, s.power); }
+      else { var ts = aiTargets(); if (ts.length) shoot(ts[0].x - cb.x, ts[0].y - cb.y, 0.6); else shoot((L + Rr) / 2 - cb.x, T - cb.y, 0.5); }
+    }
+    function scheduleAI() { setTimeout(function () { if (running) aiPlay(); }, 750); }
+
+    /* ---- rendu ---- */
+    function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+    function shadeBall(x, y, col) {
+      ctx.beginPath(); ctx.arc(x, y + BR * 0.16, BR, 0, 7); ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fill();
+      var g = ctx.createRadialGradient(x - BR * 0.3, y - BR * 0.32, BR * 0.15, x, y, BR);
+      g.addColorStop(0, 'rgba(255,255,255,.92)'); g.addColorStop(0.36, col); g.addColorStop(1, col);
+      ctx.beginPath(); ctx.arc(x, y, BR, 0, 7); ctx.fillStyle = g; ctx.fill();
+    }
+    function numCircle(x, y, num) {
+      ctx.beginPath(); ctx.arc(x, y, BR * 0.5, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.fillStyle = '#1b1b1b'; ctx.font = 'bold ' + Math.round(BR * 0.72) + 'px Arial, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('' + num, x, y + BR * 0.06);
+    }
+    function drawBall(b) {
+      var x = b.x, y = b.y;
+      if (b.type === 'cue') { shadeBall(x, y, '#fdfdfd'); }
+      else if (b.type === 'stripe') {
+        shadeBall(x, y, '#f7f5ee');
+        ctx.save(); ctx.beginPath(); ctx.arc(x, y, BR, 0, 7); ctx.clip();
+        ctx.fillStyle = b.col; ctx.fillRect(x - BR, y - BR * 0.52, BR * 2, BR * 1.04); ctx.restore();
+        numCircle(x, y, b.num);
+      } else { shadeBall(x, y, b.col); numCircle(x, y, b.num); }
+      ctx.beginPath(); ctx.arc(x, y, BR, 0, 7); ctx.strokeStyle = 'rgba(0,0,0,.22)'; ctx.lineWidth = 1.3; ctx.stroke();
+    }
+    function render() {
+      ctx.clearRect(0, 0, Wt, Ht);
+      rr(1, 1, Wt - 2, Ht - 2, M * 0.7); ctx.fillStyle = '#5a3a22'; ctx.fill();
+      rr(L, T, Rr - L, Bb - T, M * 0.25); ctx.fillStyle = '#2f7d4e'; ctx.fill();
+      for (var pk = 0; pk < pockets.length; pk++) { ctx.beginPath(); ctx.arc(pockets[pk][0], pockets[pk][1], POCK, 0, 7); ctx.fillStyle = '#0b0b0b'; ctx.fill(); }
+      for (var i = 0; i < balls.length; i++) if (!balls[i].potted) drawBall(balls[i]);
+      var human = !(mode === 'ai' && cur === 1);
+      if (ballInHand && human && !over) {
+        var cbb = cueB(); ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cbb.x, cbb.y, BR + 3, 0, 7); ctx.stroke(); ctx.restore();
+      }
+      if (aiming && !moving() && !over && !ballInHand) {
+        var cu = cueB(), dx = cu.x - aimX, dy = cu.y - aimY, d = Math.hypot(dx, dy);
+        if (d > 4) {
+          var pw = Math.min(d, maxPull) / maxPull;
+          ctx.save(); ctx.setLineDash([6, 7]); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.85)';
+          ctx.beginPath(); ctx.moveTo(cu.x, cu.y); ctx.lineTo(cu.x + dx / d * (BR + pw * Wt * 0.9), cu.y + dy / d * (BR + pw * Wt * 0.9)); ctx.stroke();
+          ctx.setLineDash([]); ctx.strokeStyle = 'rgba(230,180,90,.95)'; ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.moveTo(cu.x - dx / d * BR * 1.4, cu.y - dy / d * BR * 1.4); ctx.lineTo(cu.x - dx / d * (BR * 1.4 + pw * Wt * 0.5), cu.y - dy / d * (BR * 1.4 + pw * Wt * 0.5)); ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+    function frame(t) {
+      if (!running || !canvas.isConnected) return;
+      if (!last) last = t; var dt = Math.min(0.045, (t - last) / 1000); last = t;
+      var K = 4, sd = dt / K; for (var k = 0; k < K; k++) step(sd);   // sous-pas : collisions fiables
+      render(); requestAnimationFrame(frame);
+    }
+
+    function pt(e) { var r = canvas.getBoundingClientRect(); var x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left, y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top; return [x * Wt / r.width, y * Ht / r.height]; }
+    function placeCue(q) { var cb = cueB(); cb.x = Math.max(L + BR, Math.min(Rr - BR, q[0])); cb.y = Math.max(T + BR, Math.min(Bb - BR, q[1])); }
+    function cueValid() { var cb = cueB(); for (var i = 1; i < balls.length; i++) { var b = balls[i]; if (!b.potted && Math.hypot(cb.x - b.x, cb.y - b.y) < BR * 2) return false; } return true; }
+
+    canvas.addEventListener('pointerdown', function (e) {
+      if (over || moving() || phase !== 'aim') return;
+      if (mode === 'ai' && cur === 1) return;
+      var q = pt(e);
+      if (ballInHand) { placing = true; placeCue(q); return; }
+      aiming = true; aimX = q[0]; aimY = q[1];
+    });
+    canvas.addEventListener('pointermove', function (e) {
+      var q = pt(e);
+      if (placing) { placeCue(q); e.preventDefault(); return; }
+      if (aiming) { aimX = q[0]; aimY = q[1]; e.preventDefault(); }
+    }, { passive: false });
+    window.addEventListener('pointerup', function () {
+      if (placing) { placing = false; if (cueValid()) { ballInHand = false; msg = ''; setStatus(); } return; }
+      if (!aiming) return; aiming = false;
+      var cb = cueB(), dx = cb.x - aimX, dy = cb.y - aimY, d = Math.hypot(dx, dy);
+      if (d > 6) shoot(dx, dy, Math.min(d, maxPull) / maxPull);
+    });
+
+    teardown = function () { running = false; };
+    view.appendChild(modeSeg('ai', function (v) { mode = v; setup(); }));
+    view.appendChild(status); view.appendChild(wrap);
+    view.appendChild(E('p', 'bg-hint', 'Pleines (1-7) ou rayées (9-15), puis la 8 pour gagner. Tire la queue vers l’arrière depuis la blanche et relâche. Faute = bille en main pour l’adversaire.'));
+    view.appendChild(newBtn(setup));
+    setup();
+    requestAnimationFrame(frame);
+  }
+
   var GAMES = [
     { id: 'dames', name: 'Dames', icon: 'dames', desc: 'Le damier · ordi ou à deux', build: buildDames },
     { id: 'echecs', name: 'Échecs', icon: 'chess', desc: 'Ordi ou à deux', build: buildChess },
+    { id: 'billard', name: 'Billard', icon: 'billard', desc: '8-ball · pleines/rayées · ordi ou à deux', build: buildBillard },
     { id: 'zuma', name: 'Zuma', icon: 'zuma', desc: 'Aligne 3 boules', build: buildZuma }
   ];
 
