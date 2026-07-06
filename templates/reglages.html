@@ -78,6 +78,22 @@
         {% for e in form.cover.errors %}<div class="help" style="color:#ffb4b4">{{ e }}</div>{% endfor %}
       </div>
 
+      <div class="field">
+        <label>Publicités du menu <span style="color:var(--muted);font-weight:500">(carrousel qui défile en haut du menu)</span></label>
+        {% if ads %}
+          <div class="ads-grid">
+            {% for ad in ads %}
+              <label class="ad-thumb" style="background-image:url('{{ ad.image.url }}')">
+                <input type="checkbox" name="ad_delete" value="{{ ad.id }}">
+                <span class="ad-del">Retirer</span>
+              </label>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <input type="file" name="ads" accept="image/*" multiple class="file-input">
+        <div class="help" style="color:var(--muted)">Ajoutez une ou plusieurs images (promos, événements, boissons du moment…). Elles défileront automatiquement en haut du menu. Coche « Retirer » puis Enregistrer pour en supprimer une.</div>
+      </div>
+
       <button class="btn btn-gold btn-block" type="submit">Enregistrer</button>
     </form>
   </div>
@@ -91,6 +107,12 @@
     .cover-clear input { width:auto; }
     .file-input { padding:11px; color:var(--muted); }
     .file-input::file-selector-button { margin-right:12px; border:0; border-radius:10px; padding:9px 14px; font-weight:700; cursor:pointer; background:linear-gradient(135deg,var(--gold),var(--gold-2)); color:var(--navy-3); }
+    .ads-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-bottom:12px; }
+    .ad-thumb { position:relative; aspect-ratio:16/9; border-radius:12px; background:#000 center/cover no-repeat; border:1px solid var(--line); cursor:pointer; overflow:hidden; }
+    .ad-thumb input { position:absolute; opacity:0; width:0; height:0; }
+    .ad-del { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:center; padding:7px; font-size:.72rem; font-weight:800; color:#fff; background:linear-gradient(to top, rgba(0,0,0,.55), transparent 55%); transition:background .15s; }
+    .ad-thumb input:checked ~ .ad-del { background:rgba(197,48,48,.74); align-items:center; }
+    .ad-thumb input:checked ~ .ad-del::before { content:"✓ "; }
   </style>
 </div>
 

@@ -301,6 +301,20 @@ class MenuScan(models.Model):
         return f"Scan {self.bar.name} {self.ts:%Y-%m-%d %H:%M}"
 
 
+class MenuAd(models.Model):
+    """Image publicitaire affichée dans le carrousel en haut du menu client.
+    Chaque établissement peut en ajouter plusieurs (elles défilent en boucle)."""
+    bar = models.ForeignKey(Bar, on_delete=models.CASCADE, related_name="ads")
+    image = models.ImageField("Image de publicité", upload_to="ads/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Pub {self.bar.name} #{self.pk}"
+
+
 class Subscription(models.Model):
     """Abonnement d'un établissement au service BUUB (10 000 XAF / mois)."""
     bar = models.OneToOneField(Bar, on_delete=models.CASCADE, related_name="subscription")

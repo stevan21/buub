@@ -26,7 +26,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .forms import GerantSignupForm, ServeurForm, BarSettingsForm
 from .models import (Item, Movement, Todo, Archive, Order, OrderLine, Profile,
-                     Bar, PendingOrder, PendingOrderLine, guess_kind, MenuScan,
+                     Bar, PendingOrder, PendingOrderLine, guess_kind, MenuScan, MenuAd,
                      Subscription, SubscriptionPayment, SUBSCRIPTION_PRICE, TRIAL_DAYS)
 
 
@@ -465,10 +465,18 @@ def reglages(request):
         form = BarSettingsForm(request.POST, request.FILES, instance=bar)
         if form.is_valid():
             form.save()
+            # Publicités du menu : suppression des cochées, ajout des nouvelles images
+            del_ids = [i for i in request.POST.getlist("ad_delete") if i.isdigit()]
+            if del_ids:
+                MenuAd.objects.filter(bar=bar, id__in=del_ids).delete()
+            for f in request.FILES.getlist("ads"):
+                MenuAd.objects.create(bar=bar, image=f)
             saved = True
     else:
         form = BarSettingsForm(instance=bar)
-    return render(request, "reglages.html", {"form": form, "bar": bar, "saved": saved})
+    return render(request, "reglages.html", {
+        "form": form, "bar": bar, "saved": saved, "ads": bar.ads.all(),
+    })
 
 
 def service_worker(request):
@@ -959,6 +967,7 @@ def public_menu(request, token):
         "bar": bar, "token": token, "table": table,
         "categories": bar.category_suggestions(),
         "asset_v": asset_version("menu.css", "menu.js", "games.css", "games.js"),
+        "ads": list(bar.ads.all()),
         **menu_theme(bar),
     })
     # HTML toujours revalidé → le client récupère toujours la dernière version

@@ -28,16 +28,38 @@
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
 </defs></svg>
 
-<header class="m-top">
-  <div class="m-brand">
-    <span class="m-logo"><img src="{% static 'icons/buub.jpeg' %}" alt="buub"></span>
-    <span class="m-brand-txt">
-      <span class="m-bar-name">{{ bar.name }}</span>
-      <span class="m-brand-sub">Installez-vous, on s'occupe du reste</span>
-    </span>
+<header class="m-top" id="mTop">
+  <div class="m-top-main">
+    <div class="m-brand">
+      <span class="m-logo"><img src="{% static 'icons/buub.jpeg' %}" alt="buub"></span>
+      <span class="m-brand-txt">
+        <span class="m-bar-name">{{ bar.name }}</span>
+        <span class="m-brand-sub">Installez-vous, on s'occupe du reste</span>
+      </span>
+    </div>
+    {% if table %}<span class="m-table" id="mTable"><svg class="ico"><use href="#i-pin"/></svg> Table {{ table }}</span>{% endif %}
   </div>
-  {% if table %}<span class="m-table" id="mTable"><svg class="ico"><use href="#i-pin"/></svg> Table {{ table }}</span>{% endif %}
+  <div class="m-search">
+    <svg class="ico m-search-ico"><use href="#i-search"/></svg>
+    <input type="text" id="searchInput" placeholder="Un petit creux ? Une soif ?" autocomplete="off">
+    <button class="m-search-clear" id="searchClear" type="button" aria-label="Effacer" hidden><svg class="ico"><use href="#i-x"/></svg></button>
+  </div>
 </header>
+
+{% if ads %}
+<section class="m-ads" id="mAds" aria-label="Publicités">
+  <div class="m-ads-track" id="mAdsTrack">
+    {% for ad in ads %}
+    <div class="m-ad-slide"><img src="{{ ad.image.url }}" alt="Publicité" loading="lazy"></div>
+    {% endfor %}
+  </div>
+  {% if ads|length > 1 %}
+  <div class="m-ads-dots" id="mAdsDots">
+    {% for ad in ads %}<button class="m-ad-dot{% if forloop.first %} on{% endif %}" type="button" data-i="{{ forloop.counter0 }}" aria-label="Publicité {{ forloop.counter }}"></button>{% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}
 
 {% if bar.cover %}
 <div class="m-cover" style="background-image: linear-gradient(180deg, rgba(20,12,6,.10) 0%, rgba(20,12,6,.62) 100%), url('{{ bar.cover.url }}')">
@@ -47,12 +69,6 @@
   </div>
 </div>
 {% endif %}
-
-<div class="m-search">
-  <svg class="ico m-search-ico"><use href="#i-search"/></svg>
-  <input type="text" id="searchInput" placeholder="Un petit creux ? Une soif ?" autocomplete="off">
-  <button class="m-search-clear" id="searchClear" type="button" aria-label="Effacer" hidden><svg class="ico"><use href="#i-x"/></svg></button>
-</div>
 
 <!-- Onglets Boissons / Nourriture (affichés seulement si les deux existent) -->
 <nav class="m-tabs" id="kindTabs" hidden>
@@ -106,6 +122,47 @@
     stateUrl: "{% url 'public_menu' token %}state/",
     orderUrl: "{% url 'public_menu' token %}order/"
   };
+  /* Nav fixe : on décale le contenu de la hauteur exacte du header */
+  (function () {
+    var top = document.getElementById('mTop');
+    if (!top) return;
+    function setPad() { document.body.style.paddingTop = top.offsetHeight + 'px'; }
+    setPad();
+    window.addEventListener('load', setPad);
+    window.addEventListener('resize', setPad);
+    if (window.ResizeObserver) new ResizeObserver(setPad).observe(top);
+  })();
+
+  /* Carrousel de publicités : défilement auto + swipe manuel + points */
+  (function () {
+    var track = document.getElementById('mAdsTrack');
+    if (!track) return;
+    var n = track.children.length;
+    if (n < 2) return;
+    var dots = Array.prototype.slice.call(document.querySelectorAll('#mAdsDots .m-ad-dot'));
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var i = 0, timer = null, paused = false, raf;
+
+    function w() { return track.clientWidth; }
+    function go(idx) { i = (idx + n) % n; track.scrollTo({ left: i * w(), behavior: 'smooth' }); }
+    function start() { stop(); if (!reduced) timer = setInterval(function () { if (!paused) go(i + 1); }, 4200); }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+    track.addEventListener('scroll', function () {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(function () {
+        var idx = Math.round(track.scrollLeft / w());
+        if (idx !== i) { i = idx; }
+        for (var d = 0; d < dots.length; d++) dots[d].classList.toggle('on', d === i);
+      });
+    }, { passive: true });
+
+    dots.forEach(function (dot) { dot.addEventListener('click', function () { go(+dot.dataset.i); start(); }); });
+    ['pointerdown', 'mouseenter'].forEach(function (ev) { track.addEventListener(ev, function () { paused = true; }, { passive: true }); });
+    ['pointerup', 'mouseleave', 'touchend'].forEach(function (ev) { track.addEventListener(ev, function () { paused = false; }, { passive: true }); });
+    window.addEventListener('resize', function () { track.scrollLeft = i * w(); });
+    start();
+  })();
 </script>
 <script src="{% static 'games.js' %}?v={{ asset_v }}"></script>
 <script src="{% static 'menu.js' %}?v={{ asset_v }}"></script>
