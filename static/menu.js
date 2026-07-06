@@ -388,8 +388,26 @@
   $('sheetBackdrop').addEventListener('click', closeSheet);
   sendBtn.addEventListener('click', send);
   $('againBtn').addEventListener('click', function () { doneScreen.hidden = true; loadMenu(); });
+  // Jeux chargés à la demande (allège fortement le scan du menu : ~54 Ko en moins)
+  var _gReady = false, _gLoading = false, _gCbs = [];
+  function loadGames(cb) {
+    if (_gReady) { cb(); return; }
+    _gCbs.push(cb);
+    if (_gLoading) return;
+    _gLoading = true;
+    if (window.MENU && window.MENU.gamesCss) {
+      var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = window.MENU.gamesCss; document.head.appendChild(l);
+    }
+    var s = document.createElement('script');
+    s.src = (window.MENU && window.MENU.gamesJs) || '/static/games.js';
+    s.onload = function () { _gReady = true; _gCbs.forEach(function (f) { f(); }); _gCbs = []; };
+    s.onerror = function () { _gLoading = false; _gCbs = []; };
+    document.body.appendChild(s);
+  }
   var playBtn = $('playBtn');
-  if (playBtn) playBtn.addEventListener('click', function () { if (window.BuubGames) window.BuubGames.open(); });
+  if (playBtn) playBtn.addEventListener('click', function () {
+    loadGames(function () { if (window.BuubGames) window.BuubGames.open(); });
+  });
 
   loadMenu();
 })();

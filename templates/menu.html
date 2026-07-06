@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{{ bar.name }} — Commander</title>
   <link rel="stylesheet" href="{% static 'menu.css' %}?v={{ asset_v }}">
-  <link rel="stylesheet" href="{% static 'games.css' %}?v={{ asset_v }}">
   <!-- Couleur d'accent choisie par l'établissement (ou orange BUUB par défaut) -->
   <style>:root { --accent: {{ menu_accent }}; --accent-2: {{ menu_accent_2 }}; --accent-rgb: {{ menu_accent_rgb }}; }</style>
   <meta name="theme-color" content="#f6efe2">
@@ -120,7 +119,9 @@
     token: "{{ token }}",
     table: "{{ table|escapejs }}",
     stateUrl: "{% url 'public_menu' token %}state/",
-    orderUrl: "{% url 'public_menu' token %}order/"
+    orderUrl: "{% url 'public_menu' token %}order/",
+    gamesCss: "{% static 'games.css' %}?v={{ asset_v }}",
+    gamesJs: "{% static 'games.js' %}?v={{ asset_v }}"
   };
   /* Nav fixe : on décale le contenu de la hauteur exacte du header */
   (function () {
@@ -164,7 +165,6 @@
     start();
   })();
 </script>
-<script src="{% static 'games.js' %}?v={{ asset_v }}"></script>
 <script src="{% static 'menu.js' %}?v={{ asset_v }}"></script>
 </body>
 </html>

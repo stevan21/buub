@@ -16,6 +16,33 @@ def generate_token():
     return secrets.token_hex(16)
 
 
+def optimize_image(field, max_px=1000, quality=82):
+    """Redimensionne/compresse une image uploadée (allège le menu client).
+
+    Ne touche au fichier que s'il est plus grand que `max_px` — donc une image
+    déjà optimisée n'est jamais ré-encodée (juste une lecture d'en-tête, rapide).
+    Silencieux en cas d'erreur (stockage non-local, fichier illisible…)."""
+    try:
+        path = field.path                       # stockage local uniquement
+    except (ValueError, NotImplementedError, AttributeError):
+        return
+    try:
+        from PIL import Image
+        img = Image.open(path)
+        if max(img.size) <= max_px:
+            return                              # déjà assez petite → on ne re-encode pas
+        fmt = (img.format or "").upper()
+        img.thumbnail((max_px, max_px), Image.LANCZOS)
+        if fmt == "PNG":
+            img.save(path, "PNG", optimize=True)
+        elif fmt in ("JPEG", "JPG"):
+            img.convert("RGB").save(path, "JPEG", quality=quality, optimize=True, progressive=True)
+        else:
+            img.save(path)                      # format exotique : on garde tel quel
+    except Exception:
+        pass
+
+
 # Catégories proposées par défaut selon le type d'établissement (suggestions, modifiables).
 DEFAULT_CATEGORIES = {
     "cave": ["Vins", "Spiritueux", "Bières", "Sans alcool", "Autres"],
@@ -97,6 +124,11 @@ class Bar(models.Model):
         sub = getattr(self, "subscription", None)
         return bool(sub and sub.is_active)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.cover:
+            optimize_image(self.cover, max_px=1400)   # bannière large
+
 
 class Profile(models.Model):
     """Lie un utilisateur Django à un bar avec un rôle."""
@@ -166,6 +198,11 @@ class Item(models.Model):
     @property
     def is_low_stock(self):
         return self.quantity <= (self.low_stock_threshold or 0)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.image:
+            optimize_image(self.image, max_px=900)     # photo d'article
 
 
 class Movement(models.Model):
@@ -313,6 +350,11 @@ class MenuAd(models.Model):
 
     def __str__(self):
         return f"Pub {self.bar.name} #{self.pk}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.image:
+            optimize_image(self.image, max_px=1280)    # bannière pub
 
 
 class Subscription(models.Model):

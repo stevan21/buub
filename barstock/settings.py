@@ -133,6 +133,19 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 # Destination de `collectstatic` en production (servi directement par nginx).
 STATIC_ROOT = os.environ.get('DJANGO_STATIC_ROOT', str(BASE_DIR / 'staticfiles'))
 
+# En production : noms de fichiers hachés (app.<hash>.js) → cache immuable 1 an
+# côté navigateur ET rafraîchissement automatique à chaque changement.
+# En dev local (DEBUG) : stockage simple, pour ne pas exiger collectstatic.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG
+            else "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+        )
+    },
+}
+
 # Fichiers média (photos des articles, uploadés depuis l'admin)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
