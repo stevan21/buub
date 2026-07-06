@@ -19,26 +19,35 @@ def generate_token():
 def optimize_image(field, max_px=1000, quality=82):
     """Redimensionne/compresse une image uploadée (allège le menu client).
 
-    Ne touche au fichier que s'il est plus grand que `max_px` — donc une image
-    déjà optimisée n'est jamais ré-encodée (juste une lecture d'en-tête, rapide).
-    Silencieux en cas d'erreur (stockage non-local, fichier illisible…)."""
+    Silencieux si stockage non-local ou fichier illisible."""
     try:
         path = field.path                       # stockage local uniquement
     except (ValueError, NotImplementedError, AttributeError):
         return
+    optimize_image_file(path, max_px, quality)
+
+
+def optimize_image_file(path, max_px=1000, quality=82):
+    """Optimise une image sur disque : redimensionne si > max_px, et recompresse
+    (JPEG progressif, ou PNG quantifié 256 couleurs). Ignore les images déjà
+    petites ET légères pour ne pas les re-dégrader à chaque sauvegarde."""
     try:
+        import os
         from PIL import Image
-        img = Image.open(path)
-        if max(img.size) <= max_px:
-            return                              # déjà assez petite → on ne re-encode pas
+        orig = os.path.getsize(path)
+        img = Image.open(path)                  # lazy : lit juste l'en-tête
         fmt = (img.format or "").upper()
-        img.thumbnail((max_px, max_px), Image.LANCZOS)
+        big = max(img.size) > max_px
+        if not big and orig <= 180 * 1024:
+            return                              # déjà optimisée
+        if big:
+            img.thumbnail((max_px, max_px), Image.LANCZOS)
         if fmt == "PNG":
-            img.save(path, "PNG", optimize=True)
+            has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
+            base = img.convert("RGBA") if has_alpha else img.convert("RGB")
+            base.quantize(colors=256, method=Image.FASTOCTREE).save(path, "PNG", optimize=True)
         elif fmt in ("JPEG", "JPG"):
             img.convert("RGB").save(path, "JPEG", quality=quality, optimize=True, progressive=True)
-        else:
-            img.save(path)                      # format exotique : on garde tel quel
     except Exception:
         pass
 
