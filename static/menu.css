@@ -30,6 +30,11 @@
 ::-webkit-scrollbar-thumb { background: rgba(44, 32, 24, .22); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
+/* Anti-débordement horizontal global (mobile) : html + body clippés */
+html { overflow-x: hidden; max-width: 100%; }
+img { max-width: 100%; }
+.m-card-name, .m-card-desc, .m-line-name { overflow-wrap: break-word; word-break: break-word; }
+
 .menu-body {
   font-family: 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
   color: var(--ink);
@@ -113,11 +118,12 @@
 }
 .m-ads-track::-webkit-scrollbar { display: none; }
 .m-ad-slide {
-  position: relative; flex: 0 0 88%; scroll-snap-align: center;
+  /* largeur basée sur le VIEWPORT (vw) et non sur le parent → pas de boucle d'élargissement */
+  position: relative; flex: 0 0 auto; width: 84vw; max-width: 560px; scroll-snap-align: center;
   border-radius: 20px; overflow: hidden;
   box-shadow: 0 12px 28px rgba(40, 28, 18, .22), inset 0 0 0 1px rgba(255, 255, 255, .07);
 }
-.m-ads.solo .m-ad-slide { flex-basis: calc(100% - 32px); }   /* une seule pub : pleine largeur */
+.m-ads.solo .m-ad-slide { width: calc(100vw - 32px); }   /* une seule pub : pleine largeur */
 /* Taille d'affichage IDENTIQUE pour toute image (quelle que soit sa dimension) */
 .m-ad-slide img {
   display: block; width: 100%; height: 180px; object-fit: cover; object-position: center;
@@ -396,6 +402,7 @@ body.food-theme {
   .m-search, .m-top { max-width: 760px; margin-left: auto; margin-right: auto; }
   .m-cover { max-width: 760px; margin: 16px auto 0; height: 240px; border-radius: 20px; border: 1px solid var(--line); }
   .m-ads { max-width: 792px; margin: 6px auto 0; }
+  .m-ad-slide { width: 88%; max-width: 680px; }
   .m-ad-slide img { height: 240px; }
   .m-cartbar { max-width: 730px; left: 50%; transform: translateX(-50%); }
   .m-cartbar.in { animation: cartInD .4s var(--spring); }
