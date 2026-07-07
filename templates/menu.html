@@ -46,17 +46,17 @@
 </header>
 
 {% if ads %}
-<section class="m-ads" id="mAds" aria-label="Publicités">
-  <div class="m-ads-track" id="mAdsTrack">
-    {% for ad in ads %}
-    <div class="m-ad-slide"><img src="{{ ad.image.url }}" alt="Publicité" loading="lazy"></div>
-    {% endfor %}
-  </div>
+<section class="m-ads{% if ads|length == 1 %} solo{% endif %}" id="mAds" aria-label="Publicités">
   {% if ads|length > 1 %}
-  <div class="m-ads-dots" id="mAdsDots">
-    {% for ad in ads %}<button class="m-ad-dot{% if forloop.first %} on{% endif %}" type="button" data-i="{{ forloop.counter0 }}" aria-label="Publicité {{ forloop.counter }}"></button>{% endfor %}
+  <div class="m-ads-bars" id="mAdsBars">
+    {% for ad in ads %}<span class="m-ad-bar"><i></i></span>{% endfor %}
   </div>
   {% endif %}
+  <div class="m-ads-track" id="mAdsTrack">
+    {% for ad in ads %}
+    <div class="m-ad-slide"><img src="{{ ad.image.url }}" alt="Publicité" loading="lazy"><span class="m-ad-scrim"></span></div>
+    {% endfor %}
+  </div>
 </section>
 {% endif %}
 
@@ -134,35 +134,49 @@
     if (window.ResizeObserver) new ResizeObserver(setPad).observe(top);
   })();
 
-  /* Carrousel de publicités : défilement auto + swipe manuel + points */
+  /* Carrousel de pubs : cartes "peek", auto-défilement + barres de progression (stories) */
   (function () {
     var track = document.getElementById('mAdsTrack');
     if (!track) return;
-    var n = track.children.length;
+    var slides = track.children, n = slides.length;
     if (n < 2) return;
-    var dots = Array.prototype.slice.call(document.querySelectorAll('#mAdsDots .m-ad-dot'));
+    var bars = Array.prototype.slice.call(document.querySelectorAll('#mAdsBars .m-ad-bar'));
     var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var i = 0, timer = null, paused = false, raf;
+    var DUR = 4600, i = 0, paused = false, startT = 0, elapsed = 0, raf = null, settle;
 
-    function w() { return track.clientWidth; }
-    function go(idx) { i = (idx + n) % n; track.scrollTo({ left: i * w(), behavior: 'smooth' }); }
-    function start() { stop(); if (!reduced) timer = setInterval(function () { if (!paused) go(i + 1); }, 4200); }
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
-
+    function centerOf(idx) { var s = slides[idx]; return s.offsetLeft - (track.clientWidth - s.offsetWidth) / 2; }
+    function setBars() { for (var b = 0; b < bars.length; b++) bars[b].firstElementChild.style.width = b < i ? '100%' : '0%'; }
+    function goto(idx, smooth) {
+      i = (idx + n) % n;
+      track.scrollTo({ left: centerOf(i), behavior: smooth === false ? 'auto' : 'smooth' });
+      startT = 0; elapsed = 0; setBars();
+    }
+    function tick(t) {
+      if (!startT) startT = t;
+      if (paused) { startT = t - elapsed; }
+      else {
+        elapsed = t - startT;
+        var p = elapsed / DUR; if (p > 1) p = 1;
+        if (bars[i]) bars[i].firstElementChild.style.width = (p * 100) + '%';
+        if (p >= 1) goto(i + 1);
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    // Swipe manuel → recale l'index sur la carte la plus centrée
     track.addEventListener('scroll', function () {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(function () {
-        var idx = Math.round(track.scrollLeft / w());
-        if (idx !== i) { i = idx; }
-        for (var d = 0; d < dots.length; d++) dots[d].classList.toggle('on', d === i);
-      });
+      clearTimeout(settle);
+      settle = setTimeout(function () {
+        var best = 0, bd = 1e9, c = track.scrollLeft + track.clientWidth / 2;
+        for (var k = 0; k < n; k++) { var mid = slides[k].offsetLeft + slides[k].offsetWidth / 2, d = Math.abs(mid - c); if (d < bd) { bd = d; best = k; } }
+        if (best !== i) { i = best; startT = 0; elapsed = 0; setBars(); }
+      }, 130);
     }, { passive: true });
+    ['pointerdown', 'touchstart', 'mouseenter'].forEach(function (e) { track.addEventListener(e, function () { paused = true; }, { passive: true }); });
+    ['pointerup', 'touchend', 'pointercancel', 'mouseleave'].forEach(function (e) { track.addEventListener(e, function () { paused = false; }, { passive: true }); });
+    window.addEventListener('resize', function () { track.scrollTo({ left: centerOf(i), behavior: 'auto' }); });
 
-    dots.forEach(function (dot) { dot.addEventListener('click', function () { go(+dot.dataset.i); start(); }); });
-    ['pointerdown', 'mouseenter'].forEach(function (ev) { track.addEventListener(ev, function () { paused = true; }, { passive: true }); });
-    ['pointerup', 'mouseleave', 'touchend'].forEach(function (ev) { track.addEventListener(ev, function () { paused = false; }, { passive: true }); });
-    window.addEventListener('resize', function () { track.scrollLeft = i * w(); });
-    start();
+    goto(0, false);
+    if (!reduced) raf = requestAnimationFrame(tick);
   })();
 </script>
 <script src="{% static 'menu.js' %}?v={{ asset_v }}"></script>
