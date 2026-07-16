@@ -55,7 +55,7 @@ db.sqlite3       base de données
 | POST | `/api/items/<id>/move/` | entrée / sortie de stock |
 | POST | `/api/items/<id>/price/` | modifier le prix |
 | DELETE | `/api/items/<id>/` | supprimer un article |
-| POST | `/api/reset/` | réinitialiser le stock |
+| POST | `/api/reset/` | réinitialiser le stock (exige `{password}` — mot de passe du compte) |
 | POST | `/api/history/clear/` | vider l'historique |
 | POST | `/api/todos/` | créer une tâche |
 | POST | `/api/todos/<id>/toggle/` | cocher / décocher |

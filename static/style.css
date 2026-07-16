@@ -639,7 +639,13 @@
     .btn-ghost:hover { background: #e6edf5; }
     .btn-danger-ghost { background: #fff5f5; color: var(--red); border-color: #fed7d7; }
     .btn-danger-ghost:hover { background: #fed7d7; }
+    .btn-danger { background: var(--red); color: #fff; box-shadow: 0 4px 12px rgba(197,48,48,0.28); }
+    .btn-danger:hover { filter: brightness(0.93); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(197,48,48,0.35); }
+    .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; transform: none; filter: none; }
     .btn:active { transform: scale(0.97); }
+
+    /* Avertissement dans la modale de réinitialisation */
+    .reset-warn { font-size: 0.86rem; color: var(--navy); line-height: 1.55; margin: 0 0 14px; }
 
     /* ===== FORMULAIRE AJOUT ===== */
     .add-form {

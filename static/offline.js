@@ -171,14 +171,10 @@
     }
 
     // --- Réinitialiser le stock ---
+    // Action destructive protégée par mot de passe : la vérification n'est
+    // possible que côté serveur, donc on la refuse hors ligne.
     if (method === "POST" && path === "/reset/") {
-      var c = s.items.length;
-      if (c) {
-        pushMove(s, { itemId: null, itemName: "— Inventaire —", type: "reset", qty: c,
-          before: 0, after: 0, note: c + " articles supprimés", value: 0 });
-        s.items = [];
-      }
-      return { meta: {} };
+      return { error: "Réinitialisation impossible hors ligne (connexion requise)" };
     }
 
     // --- Vider l'historique ---

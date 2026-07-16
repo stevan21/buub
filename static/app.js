@@ -103,6 +103,12 @@
     const kpiInToday = $('kpiInToday');
     const kpiOutToday = $('kpiOutToday');
     const resetBtn = $('resetBtn');
+    // Modale de réinitialisation (confirmation par mot de passe)
+    const resetModal = $('resetModal');
+    const resetPassword = $('resetPassword');
+    const resetConfirm = $('resetConfirm');
+    const resetCancel = $('resetCancel');
+    const resetClose = $('resetClose');
     const stockBadge = $('stockBadge');
     const todoBadge = $('todoBadge');
     const histBadge = $('histBadge');
@@ -557,13 +563,25 @@
       closeEditModal();
     }
 
-    function resetStock() {
+    // Ouvre la modale de confirmation (au lieu d'un confirm() natif)
+    function openResetModal() {
       if (items.length === 0) { showToast('Le stock est déjà vide'); return; }
-      if (confirm('Réinitialiser tout le stock ? Cette action est définitive.')) {
-        apiCall('POST', '/reset/')
-          .then(function (state) { applyState(state); showToast('Stock réinitialisé'); })
-          .catch(fail);
-      }
+      resetPassword.value = '';
+      resetModal.classList.add('show');
+      setTimeout(function () { resetPassword.focus(); }, 50);
+    }
+
+    function closeResetModal() { resetModal.classList.remove('show'); resetPassword.value = ''; }
+
+    // Confirme la réinitialisation : le mot de passe est vérifié côté serveur.
+    function confirmReset() {
+      const pwd = resetPassword.value;
+      if (!pwd) { showToast('Entrez votre mot de passe', 1600); resetPassword.focus(); return; }
+      resetConfirm.disabled = true;
+      apiCall('POST', '/reset/', { password: pwd })
+        .then(function (state) { applyState(state); showToast('Stock réinitialisé'); closeResetModal(); })
+        .catch(function (e) { showToast(e.message || 'Erreur', 2200); resetPassword.focus(); resetPassword.select(); })
+        .then(function () { resetConfirm.disabled = false; });
     }
 
     // ============================================================
@@ -1570,6 +1588,14 @@
     priceInput.addEventListener('keydown', e => { if (e.key === 'Enter') savePrice(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && priceModal.classList.contains('show')) closePriceModal(); });
 
+    // Modale réinitialisation du stock
+    resetConfirm.addEventListener('click', confirmReset);
+    resetCancel.addEventListener('click', closeResetModal);
+    resetClose.addEventListener('click', closeResetModal);
+    resetModal.addEventListener('click', e => { if (e.target === resetModal) closeResetModal(); });
+    resetPassword.addEventListener('keydown', e => { if (e.key === 'Enter') confirmReset(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && resetModal.classList.contains('show')) closeResetModal(); });
+
     // Modale édition article
     $('editConfirm').addEventListener('click', saveEditItem);
     $('editCancel').addEventListener('click', closeEditModal);
@@ -1578,7 +1604,7 @@
     [editPriceInput, editCost, editPromo].forEach(el => el.addEventListener('input', updateEditMargin));
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && editModal.classList.contains('show')) closeEditModal(); });
 
-    resetBtn.addEventListener('click', resetStock);
+    resetBtn.addEventListener('click', openResetModal);
 
     // Approvisionnement (onglets + formulaires)
     addTabs.querySelectorAll('.seg-tab').forEach(b => {

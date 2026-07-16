@@ -976,6 +976,27 @@
   </div>
 </div>
 
+<!-- ===== MODALE RÉINITIALISER LE STOCK (confirmation par mot de passe) ===== -->
+<div class="modal-backdrop" id="resetModal">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="ttl"><svg class="ico"><use href="#i-alert"></use></svg> Réinitialiser le stock</span>
+      <button class="x-btn" id="resetClose" aria-label="Fermer"><svg class="ico"><use href="#i-x"></use></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="reset-warn">Cette action supprime <strong>tous les articles</strong> du stock et est <strong>définitive</strong>. Entrez votre mot de passe pour confirmer.</p>
+      <div class="field">
+        <label>Mot de passe</label>
+        <input type="password" id="resetPassword" class="field-input" autocomplete="current-password" placeholder="Votre mot de passe">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="resetCancel">Annuler</button>
+      <button class="btn btn-danger" id="resetConfirm"><svg class="ico"><use href="#i-refresh"></use></svg> Réinitialiser</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODALE MODIFIER L'ARTICLE ===== -->
 <div class="modal-backdrop" id="editModal">
   <div class="modal">

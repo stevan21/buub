@@ -482,7 +482,7 @@ def reglages(request):
 def service_worker(request):
     """Service worker servi à la racine pour couvrir toute l'app (PWA)."""
     sw = """
-const CACHE = 'buub-v14';
+const CACHE = 'buub-v15';
 // Coquille pré-mise en cache : pages publiques + tous les assets de la plateforme.
 // Les pages authentifiées (caisse, dashboard, superadmin…) sont mises en cache à la
 // volée lors de la première visite (voir la stratégie navigate ci-dessous).
@@ -764,6 +764,10 @@ def item_update(request, pk):
 def reset_stock(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    # Action destructive : on exige le mot de passe du compte pour confirmer.
+    password = body(request).get("password") or ""
+    if not password or not request.user.check_password(password):
+        return JsonResponse({"error": "Mot de passe incorrect"}, status=403)
     bar = request.bar
     with transaction.atomic():
         count = Item.objects.filter(bar=bar).count()
