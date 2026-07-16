@@ -482,7 +482,7 @@ def reglages(request):
 def service_worker(request):
     """Service worker servi à la racine pour couvrir toute l'app (PWA)."""
     sw = """
-const CACHE = 'buub-v15';
+const CACHE = 'buub-v16';
 // Coquille pré-mise en cache : pages publiques + tous les assets de la plateforme.
 // Les pages authentifiées (caisse, dashboard, superadmin…) sont mises en cache à la
 // volée lors de la première visite (voir la stratégie navigate ci-dessous).

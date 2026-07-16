@@ -11,84 +11,245 @@
   <script src="{% static 'pwa.js' %}" defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --card:#161b22; --line:rgba(255,255,255,.08); --muted:#8b98a5; --accent:#ff7a18; --accent2:#e8590c; --green:#2ea043; --red:#e5534b; }
-    body { font-family:'Segoe UI',system-ui,Arial,sans-serif; color:#e6edf3; min-height:100vh; padding:24px 16px 50px;
-      background: radial-gradient(700px 400px at 90% -10%, rgba(255, 122, 24,.1), transparent 60%), linear-gradient(180deg,#0e1116,#070a0e); }
+    :root {
+      --card:#161b22; --card2:#1b2230; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
+      --muted:#8b98a5; --text:#e6edf3; --accent:#ff7a18; --accent2:#e8590c;
+      --green:#2ea043; --red:#e5534b;
+    }
+    body {
+      font-family:'Segoe UI',system-ui,Arial,sans-serif; color:var(--text); min-height:100vh; padding:24px 16px 50px;
+      background:
+        radial-gradient(760px 460px at 88% -12%, rgba(255,122,24,.16), transparent 60%),
+        radial-gradient(620px 420px at 8% 108%, rgba(255,122,24,.07), transparent 60%),
+        linear-gradient(180deg,#0e1116,#070a0e);
+    }
     .wrap { max-width: 560px; margin: 0 auto; }
+
+    /* ---- Barre de défilement (thème sombre + accent orange) ---- */
+    html { scrollbar-width: thin; scrollbar-color: rgba(255,122,24,.6) transparent; }
+    ::-webkit-scrollbar { width: 11px; height: 11px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(255,122,24,.75), rgba(232,89,12,.75));
+      border: 3px solid transparent; background-clip: padding-box; border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-corner { background: transparent; }
     .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
-    .logo { font-weight:900; letter-spacing:.06em; color:#1a1206; padding:8px 12px; border-radius:11px; background:linear-gradient(135deg,var(--accent),var(--accent2)); }
-    .top a { color:var(--muted); text-decoration:none; font-weight:700; font-size:.85rem; border:1px solid var(--line); padding:9px 14px; border-radius:11px; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:24px; margin-bottom:16px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
-    .state { display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; padding:6px 14px; border-radius:999px; }
-    .state.ok { background:rgba(46,160,67,.16); color:#5fd27f; }
-    .state.trial { background:rgba(255, 122, 24,.16); color:var(--accent); }
-    .state.bad { background:rgba(229,83,75,.16); color:#ff7b73; }
-    h1 { font-size:1.5rem; margin:14px 0 6px; letter-spacing:-.01em; }
-    .sub { color:var(--muted); }
-    .price { display:flex; align-items:baseline; gap:8px; margin:18px 0; }
-    .price b { font-size:2.4rem; color:var(--accent); letter-spacing:-.02em; }
-    .price span { color:var(--muted); font-weight:600; }
-    .steps { list-style:none; margin-top:14px; }
-    .steps li { display:flex; gap:12px; padding:11px 0; border-top:1px solid var(--line); }
-    .steps .n { flex:0 0 auto; width:26px; height:26px; border-radius:8px; display:grid; place-items:center; font-weight:800; font-size:.82rem; background:rgba(255, 122, 24,.18); color:var(--accent); }
-    .steps b { color:#e6edf3; }
+    .logo { font-weight:900; letter-spacing:.06em; color:#1a1206; padding:8px 12px; border-radius:11px; background:linear-gradient(135deg,var(--accent),var(--accent2)); box-shadow:0 6px 18px rgba(255,122,24,.35); }
+    .top a, .top .logout { color:var(--muted); text-decoration:none; font-weight:700; font-size:.85rem; border:1px solid var(--line); padding:9px 14px; border-radius:11px; }
+
+    /* ---- Cartes ---- */
+    .card {
+      position:relative; background:linear-gradient(180deg,var(--card),#12161d);
+      border:1px solid var(--line); border-radius:22px; padding:24px; margin-bottom:16px;
+      box-shadow:0 12px 34px rgba(0,0,0,.42);
+      animation:rise .5s cubic-bezier(.2,.7,.3,1) both;
+    }
+    .card + .card { animation-delay:.08s; }
+    .card + .card + .card { animation-delay:.14s; }
+    @keyframes rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+
+    /* Carte principale : liseré dégradé + halo */
+    .hero { overflow:hidden; border-color:transparent; background:
+      linear-gradient(180deg,var(--card),#11151c) padding-box,
+      linear-gradient(135deg, rgba(255,122,24,.55), rgba(255,122,24,.05) 45%, var(--line2)) border-box;
+      border:1px solid transparent; }
+    .hero::before {
+      content:""; position:absolute; top:-60%; right:-25%; width:340px; height:340px; pointer-events:none;
+      background:radial-gradient(circle, rgba(255,122,24,.22), transparent 62%); filter:blur(6px);
+    }
+    .hero > * { position:relative; }
+
+    .brandline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+    .plan { display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:.82rem; letter-spacing:.02em; color:var(--text); }
+    .plan .crown { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#1a1206; box-shadow:0 4px 12px rgba(255,122,24,.4); }
+    .plan .crown svg { width:15px; height:15px; }
+    .plan b { color:var(--accent); }
+
+    .state { display:inline-flex; align-items:center; gap:7px; font-weight:800; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; padding:6px 12px; border-radius:999px; border:1px solid transparent; }
+    .state .dot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 0 0 currentColor; }
+    .state.ok { background:rgba(46,160,67,.14); color:#5fd27f; border-color:rgba(46,160,67,.35); }
+    .state.ok .dot { animation:beat 1.8s ease-out infinite; }
+    .state.trial { background:rgba(255,122,24,.14); color:var(--accent); border-color:rgba(255,122,24,.4); }
+    .state.trial .dot { animation:beat 1.8s ease-out infinite; }
+    .state.bad { background:rgba(229,83,75,.14); color:#ff7b73; border-color:rgba(229,83,75,.38); }
+    @keyframes beat { 0% { box-shadow:0 0 0 0 rgba(120,220,140,.5); } 70% { box-shadow:0 0 0 7px rgba(120,220,140,0); } 100% { box-shadow:0 0 0 0 rgba(120,220,140,0); } }
+
+    h1 { font-size:1.55rem; margin:2px 0 6px; letter-spacing:-.02em; line-height:1.15; }
+    .sub { color:var(--muted); line-height:1.5; }
+    .sub b { color:var(--text); }
+
+    /* Prix */
+    .price { display:flex; align-items:flex-end; gap:10px; margin:20px 0 4px; }
+    .price b {
+      font-size:2.9rem; line-height:1; letter-spacing:-.03em; font-weight:900;
+      background:linear-gradient(135deg,#ffb066,var(--accent) 55%,var(--accent2));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .price span { color:var(--muted); font-weight:700; padding-bottom:5px; }
+    .price span i { font-style:normal; opacity:.8; }
+    .allin { display:inline-flex; align-items:center; gap:6px; margin-top:4px; font-size:.78rem; font-weight:700; color:#5fd27f; }
+    .allin svg { width:14px; height:14px; }
+
+    /* Fonctionnalités incluses */
+    .feat-title { margin:20px 0 12px; font-size:.72rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+    .features { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .feat { display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:13px; background:rgba(255,255,255,.035); border:1px solid var(--line); font-size:.85rem; font-weight:600; transition:border-color .2s, background .2s, transform .2s; }
+    .feat:hover { border-color:rgba(255,122,24,.4); background:rgba(255,122,24,.06); transform:translateY(-1px); }
+    .feat .fi { flex:0 0 auto; width:30px; height:30px; border-radius:9px; display:grid; place-items:center; background:rgba(255,122,24,.14); color:var(--accent); }
+    .feat .fi svg { width:16px; height:16px; }
+
+    /* Étapes de paiement */
+    .steps { list-style:none; margin-top:6px; }
+    .steps li { display:flex; gap:13px; padding:13px 0; border-top:1px solid var(--line); }
+    .steps li:first-child { border-top:0; padding-top:2px; }
+    .steps .n { flex:0 0 auto; width:28px; height:28px; border-radius:9px; display:grid; place-items:center; font-weight:800; font-size:.85rem; background:linear-gradient(135deg,rgba(255,122,24,.9),rgba(232,89,12,.9)); color:#1a1206; box-shadow:0 4px 12px rgba(255,122,24,.3); }
+    .steps b { color:var(--text); }
     .steps small { color:var(--muted); }
-    .momo { margin-top:14px; padding:14px 16px; border-radius:14px; background:rgba(255, 122, 24,.08); border:1px solid rgba(255, 122, 24,.3); }
-    .momo .num { font-size:1.3rem; font-weight:800; letter-spacing:.02em; }
-    .h-title { font-weight:800; margin-bottom:10px; }
-    .pay { display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-top:1px solid var(--line); font-size:.9rem; }
-    .pay span { color:var(--muted); }
+
+    /* Mobile Money */
+    .momo { margin-top:16px; padding:16px 18px; border-radius:16px; background:linear-gradient(135deg,rgba(255,122,24,.12),rgba(255,122,24,.04)); border:1px solid rgba(255,122,24,.32); }
+    .momo-head { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:.82rem; font-weight:700; margin-bottom:8px; }
+    .momo-head svg { width:16px; height:16px; color:var(--accent); }
+    .momo-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .momo .num { font-size:1.4rem; font-weight:800; letter-spacing:.03em; color:var(--text); }
+    .copy { display:inline-flex; align-items:center; gap:7px; cursor:pointer; font-weight:800; font-size:.8rem; color:#1a1206; padding:9px 14px; border-radius:11px; border:0; background:linear-gradient(135deg,var(--accent),var(--accent2)); box-shadow:0 5px 14px rgba(255,122,24,.35); transition:transform .15s, box-shadow .2s, filter .2s; }
+    .copy svg { width:15px; height:15px; }
+    .copy:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(255,122,24,.45); }
+    .copy:active { transform:scale(.96); }
+    .copy.done { background:linear-gradient(135deg,#2ea043,#238636); color:#fff; box-shadow:0 5px 14px rgba(46,160,67,.4); }
+
+    /* Historique des paiements */
+    .h-title { display:flex; align-items:center; gap:8px; font-weight:800; margin-bottom:6px; font-size:.95rem; }
+    .h-title svg { width:16px; height:16px; color:var(--accent); }
+    .pay { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); font-size:.9rem; }
+    .pay:first-of-type { border-top:0; }
+    .pay .when { color:var(--muted); display:flex; flex-direction:column; gap:2px; }
+    .pay .when em { font-style:normal; font-size:.76rem; opacity:.75; text-transform:capitalize; }
+    .pay .amt { font-weight:800; color:var(--text); white-space:nowrap; }
+    .pay .amt b { color:#5fd27f; }
     .empty { color:var(--muted); text-align:center; padding:16px 0; }
-    .note { color:var(--muted); font-size:.82rem; text-align:center; margin-top:16px; line-height:1.5; }
-    /* Embarqué dans la modale du tableau de bord : pas de chrome plein écran */
-    body.in-modal { padding:14px 14px 24px; background:#0e1116; }
+    .note { color:var(--muted); font-size:.82rem; text-align:center; margin-top:18px; line-height:1.55; }
+    .note b { color:var(--text); }
+
+    /* Embarqué dans la modale du tableau de bord : pas de chrome plein écran,
+       mais on garde le halo dégradé pour l'effet premium. */
+    body.in-modal { padding:16px 14px 26px;
+      background:
+        radial-gradient(560px 340px at 88% -14%, rgba(255,122,24,.18), transparent 60%),
+        linear-gradient(180deg,#0e1116,#0a0d12); }
     body.in-modal .top { display:none; }
+    body.in-modal .card:first-of-type { margin-top:2px; }
+    /* Laisse la place à la croix flottante du modal parent (haut-droite) */
+    body.in-modal .hero { padding-top:40px; }
+    body.in-modal .hero .brandline { padding-right:34px; }
+
+    @media (max-width:420px) { .features { grid-template-columns:1fr; } .price b { font-size:2.5rem; } }
+    @media (prefers-reduced-motion:reduce) { .card { animation:none; } .state .dot { animation:none; } }
   </style>
 </head>
 <body{% if modal %} class="in-modal"{% endif %}>
 <div class="wrap">
   <div class="top">
     <span class="logo">BUUB</span>
-    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button style="all:unset;cursor:pointer;color:var(--muted);border:1px solid var(--line);padding:9px 14px;border-radius:11px;font-weight:700;font-size:.85rem">Déconnexion</button></form>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="logout" style="cursor:pointer;background:none">Déconnexion</button></form>
   </div>
 
-  <div class="card">
+  <div class="card hero">
+    <div class="brandline">
+      <span class="plan"><span class="crown"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 5 4 5-7 5 7 5-4-2 12H4L2 7Z"/></svg></span>BUUB&nbsp;<b>Pro</b></span>
+      {% if sub and sub.is_active %}
+        {% if sub.is_trial %}<span class="state trial"><span class="dot"></span>Essai gratuit</span>{% else %}<span class="state ok"><span class="dot"></span>Actif</span>{% endif %}
+      {% else %}
+        <span class="state bad"><span class="dot"></span>{% if sub.suspended %}Suspendu{% else %}Expiré{% endif %}</span>
+      {% endif %}
+    </div>
+
+    <h1>{{ bar.name }}</h1>
     {% if sub and sub.is_active %}
-      {% if sub.is_trial %}<span class="state trial">● Essai gratuit</span>{% else %}<span class="state ok">● Abonnement actif</span>{% endif %}
-      <h1>{{ bar.name }}</h1>
-      <p class="sub">Il te reste <b>{{ sub.days_left }} jour{{ sub.days_left|pluralize }}</b> — valable jusqu'au {{ sub.current_period_end }}.</p>
+      <p class="sub">Il te reste <b>{{ sub.days_left }} jour{{ sub.days_left|pluralize }}</b> — valable jusqu'au <b>{{ sub.current_period_end }}</b>.</p>
     {% else %}
-      <span class="state bad">● {% if sub.suspended %}Compte suspendu{% else %}Abonnement expiré{% endif %}</span>
-      <h1>{{ bar.name }}</h1>
       <p class="sub">L'accès au service est bloqué. Renouvelle ton abonnement pour réactiver le tableau de bord, la caisse et le menu QR.</p>
     {% endif %}
 
-    <div class="price"><b>{{ price|floatformat:0 }} XAF</b><span>/ mois</span></div>
+    <div class="price"><b>{{ price|floatformat:0 }}</b><span>XAF <i>/ mois</i></span></div>
+    <span class="allin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Un seul prix, toutes les fonctionnalités incluses</span>
 
-    {% if role == 'gerant' %}
+    <div class="feat-title">Inclus dans l'abonnement</div>
+    <div class="features">
+      <div class="feat"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span>Tableau de bord</div>
+      <div class="feat"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1.5"/><circle cx="18" cy="21" r="1.5"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L23 7H6"/></svg></span>Caisse (POS)</div>
+      <div class="feat"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v.01M14 21h.01M21 21v-4M17 21h.01"/></svg></span>Menu QR client</div>
+      <div class="feat"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg></span>Statistiques</div>
+      <div class="feat"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg></span>Archives &amp; export</div>
+      <div class="feat"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.8a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg></span>Mode hors-ligne</div>
+    </div>
+  </div>
+
+  {% if role == 'gerant' %}
+  <div class="card">
     <ol class="steps">
       <li><span class="n">1</span><div><b>Paie {{ price|floatformat:0 }} XAF</b> par Mobile Money au numéro ci-dessous.</div></li>
       <li><span class="n">2</span><div><b>Ton accès est réactivé</b> pour 1 mois dès validation. <small>(paiement automatique bientôt disponible)</small></div></li>
     </ol>
     <div class="momo">
-      <div class="sub">Mobile Money (MTN / Orange)</div>
-      <div class="num">+237 6 00 00 00 00</div>
+      <div class="momo-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.7a2 2 0 0 1-.5 2.1L8.1 9.7a16 16 0 0 0 6 6l1.2-1.1a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.7.6a2 2 0 0 1 1.7 2Z"/></svg>Mobile Money (MTN / Orange)</div>
+      <div class="momo-row">
+        <div class="num" id="momoNum">+237 6 00 00 00 00</div>
+        <button type="button" class="copy" id="copyBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="copy-label">Copier</span>
+        </button>
+      </div>
     </div>
-    {% else %}
-      <p class="sub">Contacte le <b>gérant</b> de l'établissement pour renouveler l'abonnement.</p>
-    {% endif %}
   </div>
+  {% else %}
+  <div class="card">
+    <p class="sub">Contacte le <b>gérant</b> de l'établissement pour renouveler l'abonnement.</p>
+  </div>
+  {% endif %}
 
   {% if payments %}
   <div class="card">
-    <div class="h-title">Historique des paiements</div>
+    <div class="h-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Historique des paiements</div>
     {% for p in payments %}
-    <div class="pay"><span>{{ p.created_at|date:"d/m/Y" }} · {{ p.method }}</span><b>{{ p.amount|floatformat:0 }} XAF → {{ p.period_end }}</b></div>
+    <div class="pay"><span class="when">{{ p.created_at|date:"d/m/Y" }}<em>{{ p.method }}</em></span><span class="amt">{{ p.amount|floatformat:0 }} XAF <b>→ {{ p.period_end }}</b></span></div>
     {% endfor %}
   </div>
   {% endif %}
 
-  <p class="note">BUUB SaaS · {{ price|floatformat:0 }} XAF/mois par établissement.<br>Un reçu et le paiement en ligne arrivent bientôt.</p>
+  <p class="note"><b>BUUB SaaS</b> · {{ price|floatformat:0 }} XAF/mois par établissement.<br>Un reçu et le paiement en ligne arrivent bientôt.</p>
 </div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('copyBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var num = (document.getElementById('momoNum').textContent || '').trim();
+      var label = btn.querySelector('.copy-label');
+      function ok() {
+        btn.classList.add('done');
+        if (label) label.textContent = 'Copié !';
+        setTimeout(function () { btn.classList.remove('done'); if (label) label.textContent = 'Copier'; }, 1800);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(num).then(ok, fallback);
+      } else { fallback(); }
+      function fallback() {
+        try {
+          var t = document.createElement('textarea');
+          t.value = num; t.style.position = 'fixed'; t.style.opacity = '0';
+          document.body.appendChild(t); t.focus(); t.select();
+          document.execCommand('copy'); document.body.removeChild(t); ok();
+        } catch (e) {}
+      }
+    });
+  })();
+</script>
 </body>
 </html>
